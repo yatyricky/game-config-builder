@@ -131,7 +131,7 @@ game-config-builder/
 ## 9. Git 约定
 
 - conventional commits：`feat|fix|test|chore|docs|refactor(scope): 描述`
-- 一张卡 = 一个或少量几个 commit；不混合无关改动
+- **每完成一张卡（DoD 全满足）立即 git commit**；一张卡 = 至少一个 commit；不混合无关改动
 - 主干开发；短生命周期分支可选
 
 ## 10. 永久禁令
