@@ -1,0 +1,17 @@
+tables:
+  Hero:
+    comment: 英雄表
+    primaryKey: id
+    displayField: name
+    fields:
+      - { name: id, type: int, range: [1, 999999] }
+      - { name: name, type: string, maxLength: 64 }
+      - { name: level, type: int, range: [1, 100] }
+      - { name: quality, type: 'enum<ItemQuality>', default: White }
+      - { name: equipment, type: 'map<int, ref<Item>>' }
+      - { name: skillIds, type: 'list<ref<Skill>>' }
+    rowRules:
+      - id: level-quality
+        rule: 'quality != Purple || level >= 10'
+        severity: warning
+        message: '紫色英雄等级应不低于 10'

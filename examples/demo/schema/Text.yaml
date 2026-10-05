@@ -1,0 +1,9 @@
+tables:
+  Text:
+    comment: 本地化文本表（string 主键 + text 类型）
+    primaryKey: key
+    displayField: key
+    fields:
+      - { name: key, type: string, maxLength: 128 }
+      - { name: zh, type: text }
+      - { name: en, type: text }

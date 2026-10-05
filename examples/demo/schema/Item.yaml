@@ -1,0 +1,18 @@
+tables:
+  Item:
+    comment: 物品主档表
+    primaryKey: id
+    displayField: name
+    fields:
+      - { name: id, type: int, range: [1, 999999] }
+      - { name: name, type: string, maxLength: 64 }
+      - { name: quality, type: 'enum<ItemQuality>', default: White }
+      - { name: price, type: int, default: 0, rule: 'price >= 0 && price % 10 == 0' }
+      - { name: rewards, type: 'list<struct<RewardItem>>' }
+      - { name: attrs, type: 'map<string, float>' }
+      - { name: craftFrom, type: 'ref<Material>' }
+    rowRules:
+      - id: price-quality
+        rule: '(quality == White) || (price > 0)'
+        severity: warning
+        message: '非白品物品应定价'

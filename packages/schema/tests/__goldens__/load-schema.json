@@ -41,7 +41,10 @@
             "line": 13
           },
           "default": 1,
-          "range": [1, 9999]
+          "range": [
+            1,
+            9999
+          ]
         }
       ],
       "source": {
@@ -61,7 +64,10 @@
             "file": "types.yaml",
             "line": 16
           },
-          "range": [0, 999999]
+          "range": [
+            0,
+            999999
+          ]
         }
       ],
       "source": {
@@ -80,7 +86,10 @@
             "file": "types.yaml",
             "line": 19
           },
-          "range": [1, 999999]
+          "range": [
+            1,
+            999999
+          ]
         }
       ],
       "source": {
@@ -125,7 +134,10 @@
             "file": "Item.yaml",
             "line": 7
           },
-          "range": [1, 999999]
+          "range": [
+            1,
+            999999
+          ]
         },
         {
           "name": "name",

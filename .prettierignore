@@ -3,6 +3,9 @@ dist/
 .zcode/
 pnpm-lock.yaml
 
+# 测试生成物（内容比对走 JSON.parse 深比较，格式无关）
+**/__goldens__/
+
 # 散文文档不做格式化，避免 churn
 docs/
 CHAT.md
