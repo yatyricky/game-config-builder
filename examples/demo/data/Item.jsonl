@@ -1,0 +1,3 @@
+{"id":1001,"name":"铁剑","attrs":{"攻击":5.5},"craftFrom":2001}
+{"id":1002,"name":"铁盾","quality":"Green","price":120,"rewards":[{"itemId":1001,"count":2}],"craftFrom":2002}
+{"id":1003,"name":"草药","price":10,"rewards":[],"attrs":{},"craftFrom":2003}

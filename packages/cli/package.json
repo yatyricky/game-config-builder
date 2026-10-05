@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@gcb/schema": "workspace:*",
-    "commander": "^15.0.0"
+    "commander": "^15.0.0",
+    "@gcb/data": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",

@@ -1,0 +1,38 @@
+enums:
+  E:
+    values:
+      - { name: A, value: 0 }
+      - { name: B, value: 1 }
+structs:
+  S:
+    fields:
+      - { name: n, type: int, range: [0, 5] }
+      - { name: s, type: string }
+unions:
+  U:
+    tag: kind
+    variants:
+      - { name: V, struct: S }
+tables:
+  T1:
+    primaryKey: id
+    displayField: id
+    fields:
+      - { name: id, type: int }
+      - { name: b, type: bool }
+      - { name: i, type: int, range: [1, 10], default: 5 }
+      - { name: f, type: float, range: [0, 2], default: 1.5 }
+      - { name: s, type: string, maxLength: 4 }
+      - { name: txt, type: text }
+      - { name: e, type: 'enum<E>', default: A }
+      - { name: r, type: 'ref<T2>' }
+      - { name: st, type: 'struct<S>' }
+      - { name: l, type: 'list<int>' }
+      - { name: m, type: 'map<int, string>' }
+      - { name: u, type: 'union<U>' }
+  T2:
+    primaryKey: key
+    displayField: key
+    fields:
+      - { name: key, type: string }
+      - { name: code, type: string, unique: true }
