@@ -255,6 +255,116 @@ function readRawRows(file: string, tableName: string): RawRow[] {
   return parseJsonl(tableName, readFileSync(file, 'utf8')).rows;
 }
 
+export interface DiffReport extends CommandRun {
+  report: string;
+}
+
+/** T5.2 导出 diff：两份导出目录的行级/字段级差异 → Markdown 报告（§8.5） */
+export function runDiff(oldDir: string, newDir: string): DiffReport {
+  const oldResolved = resolveProjectPath(oldDir);
+  const newResolved = resolveProjectPath(newDir);
+  const oldManifest = readManifest(oldResolved);
+  const newManifest = readManifest(newResolved);
+  if (oldManifest === null || newManifest === null) {
+    return {
+      exitCode: 2,
+      lines: ['无法读取 manifest.json（请先运行 gcb export）'],
+      errors: [],
+      report: '',
+    };
+  }
+  const tables = [...new Set([...oldManifest.keys(), ...newManifest.keys()])].sort();
+  const lines: string[] = ['# 导出 diff 报告', ''];
+  let changes = 0;
+  for (const table of tables) {
+    const oldJsonPath = join(oldResolved, jsonPathOf(oldManifest, table));
+    const newJsonPath = join(newResolved, jsonPathOf(newManifest, table));
+    const oldRows = readRows(oldJsonPath);
+    const newRows = readRows(newJsonPath);
+    const added = [...newRows.keys()].filter((k) => !oldRows.has(k)).sort(sortPk);
+    const removed = [...oldRows.keys()].filter((k) => !newRows.has(k)).sort(sortPk);
+    const changed = [...newRows.keys()]
+      .filter(
+        (k) => oldRows.has(k) && JSON.stringify(oldRows.get(k)) !== JSON.stringify(newRows.get(k)),
+      )
+      .sort(sortPk);
+    if (added.length === 0 && removed.length === 0 && changed.length === 0) continue;
+    lines.push('## ' + table);
+    for (const pk of added) {
+      lines.push('- 新增：#' + pk);
+      changes++;
+    }
+    for (const pk of removed) {
+      lines.push('- 删除：#' + pk);
+      changes++;
+    }
+    for (const pk of changed) {
+      changes++;
+      const oldRow = oldRows.get(pk) ?? {};
+      const newRow = newRows.get(pk) ?? {};
+      const fields = [...new Set([...Object.keys(oldRow), ...Object.keys(newRow)])].sort();
+      const diffs = fields
+        .filter((f) => JSON.stringify(oldRow[f]) !== JSON.stringify(newRow[f]))
+        .map((f) => f + ': ' + previewValue(oldRow[f]) + ' → ' + previewValue(newRow[f]));
+      lines.push('- 变更 #' + pk + (diffs.length > 0 ? '：' + diffs.join('；') : ''));
+    }
+    lines.push('');
+  }
+  if (changes === 0) lines.push('无变更');
+  else lines.unshift('', '共 ' + changes + ' 处行级变更', '');
+  return { exitCode: 0, lines, errors: [], report: lines.join('\n') + '\n' };
+}
+
+function previewValue(v: unknown): string {
+  const s = JSON.stringify(v) ?? 'undefined';
+  return s.length > 50 ? s.slice(0, 47) + '...' : s;
+}
+
+function sortPk(a: string, b: string): number {
+  if (a === b) return 0;
+  if (/^-?d+$/.test(a) && /^-?d+$/.test(b)) return Number(a) - Number(b);
+  return a < b ? -1 : 1;
+}
+
+function readManifest(dir: string): Map<string, string> | null {
+  const p = join(dir, 'manifest.json');
+  if (!existsSync(p)) return null;
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(p, 'utf8'));
+    const map = new Map<string, string>();
+    if (Array.isArray(parsed)) {
+      for (const e of parsed as Array<{ table?: unknown; file?: unknown }>) {
+        if (typeof e.table === 'string' && typeof e.file === 'string') map.set(e.table, e.file);
+      }
+    }
+    return map;
+  } catch {
+    return null;
+  }
+}
+
+function jsonPathOf(manifest: Map<string, string>, table: string): string {
+  return manifest.get(table) ?? 'json/' + table + '.json';
+}
+
+function readRows(path: string): Map<string, Record<string, unknown>> {
+  const map = new Map<string, Record<string, unknown>>();
+  if (!existsSync(path)) return map;
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(path, 'utf8'));
+    const rows = (parsed as { rows?: unknown }).rows;
+    if (Array.isArray(rows)) {
+      for (const row of rows as Array<Record<string, unknown>>) {
+        const pk = row['id'] ?? row['key'];
+        if (pk !== undefined) map.set(String(pk), row);
+      }
+    }
+  } catch {
+    // 损坏文件 → 空表
+  }
+  return map;
+}
+
 export async function runCli(argv: string[]): Promise<number> {
   let lastExit = 0;
   // 兼容 `pnpm cli -- check-schema ...`：pnpm 11 会把首个 `--` 原样转发
@@ -308,6 +418,17 @@ export async function runCli(argv: string[]): Promise<number> {
         lastExit = run.exitCode;
       },
     );
+
+  program
+    .command('diff')
+    .description('对比两份导出目录，输出行级/字段级 Markdown 报告（§8.5）')
+    .argument('<oldDir>', '基线导出目录')
+    .argument('<newDir>', '新导出目录')
+    .action((oldDir: string, newDir: string) => {
+      const run = runDiff(oldDir, newDir);
+      for (const line of run.lines) console.log(line);
+      lastExit = run.exitCode;
+    });
 
   await program.parseAsync(cleanArgv, { from: 'user' });
   return lastExit;
