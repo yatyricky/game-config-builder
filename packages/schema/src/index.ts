@@ -25,3 +25,9 @@ export type {
   TypeDef,
   SchemaIr,
 } from './ir.js';
+
+export { schemaError } from './errors.js';
+export type { ValidationError } from './errors.js';
+
+export { loadSchema } from './load.js';
+export type { LoadSchemaResult } from './load.js';

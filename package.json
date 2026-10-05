@@ -11,7 +11,7 @@
     "dev:web": "pnpm --filter @gcb/web dev",
     "dev:server": "pnpm --filter @gcb/server dev",
     "test": "vitest run",
-    "test:update-goldens": "cross-env UPDATE_GOLDENS=1 vitest run",
+    "test:update-goldens": "node scripts/update-goldens.mjs",
     "test:e2e": "pnpm --filter @gcb/web test:e2e",
     "lint": "eslint . && prettier --check .",
     "typecheck": "pnpm -r --if-present run typecheck",
@@ -19,7 +19,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "cross-env": "^10.1.0",
     "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.9",
