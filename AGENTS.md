@@ -56,6 +56,7 @@ game-config-builder/
 |---|---|
 | `pnpm install` | 安装全部依赖 |
 | `pnpm test` | 全 workspace vitest（不含 e2e） |
+| `pnpm typecheck` | 逐包 `tsc --noEmit`（各包 `typecheck` script 聚合） |
 | `pnpm lint` | eslint + prettier check |
 | `pnpm test:update-goldens` | 更新黄金文件快照（仅当卡片明确要求时使用） |
 | `pnpm dev:web` | 编辑器开发服（Vite） |
