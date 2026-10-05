@@ -34,3 +34,5 @@ export type { LoadSchemaResult } from './load.js';
 
 export { parseTypeString, resolveTypes } from './type-parse.js';
 export type { TypeParseResult } from './type-parse.js';
+
+export { checkSchema } from './check.js';

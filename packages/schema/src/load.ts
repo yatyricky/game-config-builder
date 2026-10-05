@@ -419,7 +419,7 @@ function buildRowRule(
     ok = false;
   }
   const severityRaw = scalarString(valueOf(item, 'severity'));
-  if (severityRaw !== undefined && severityRaw !== 'error' && severityRaw !== 'warning') {
+  if (severityRaw !== null && severityRaw !== 'error' && severityRaw !== 'warning') {
     errors.push(
       schemaError(
         path,
