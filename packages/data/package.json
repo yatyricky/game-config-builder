@@ -8,5 +8,12 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@gcb/schema": "workspace:*",
+    "@gcb/validate": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4"
   }
 }

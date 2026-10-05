@@ -83,7 +83,18 @@ importers:
         specifier: ^4.23.15
         version: 4.23.15
 
-  packages/data: {}
+  packages/data:
+    dependencies:
+      '@gcb/schema':
+        specifier: workspace:*
+        version: link:../schema
+      '@gcb/validate':
+        specifier: workspace:*
+        version: link:../validate
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.4
+        version: 26.6.4
 
   packages/exporter: {}
 
@@ -99,7 +110,11 @@ importers:
         specifier: ^26.6.4
         version: 26.6.4
 
-  packages/validate: {}
+  packages/validate:
+    dependencies:
+      '@gcb/schema':
+        specifier: workspace:*
+        version: link:../schema
 
 packages:
 
