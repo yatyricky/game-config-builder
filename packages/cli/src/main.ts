@@ -3,7 +3,7 @@ import { isAbsolute, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { checkSchema, type SchemaIr, type ValidationError } from '@gcb/schema';
 import { loadSchemaDir } from '@gcb/schema/node';
-import { loadTable, normalizedContent, writeTableNormalized } from '@gcb/data';
+import { loadTable, normalizedContent, reindex, writeTableNormalized } from '@gcb/data';
 
 /**
  * gcb CLI（docs/02 §8 约定：exit 0 成功 / 1 校验失败 / 2 用法或内部错误）。
@@ -142,6 +142,36 @@ export function runValidate(project: string, fix: boolean): CommandRun {
   return { exitCode: errorCount > 0 ? 1 : 0, lines, errors };
 }
 
+export function runReindex(project: string): CommandRun {
+  const { schemaDir } = projectDirs(project);
+  const loaded = loadProjectSchema(schemaDir);
+  if (loaded.ioError !== undefined) {
+    return {
+      exitCode: 2,
+      lines: [`无法读取 schema 目录：${schemaDir}（${loaded.ioError}）`],
+      errors: [],
+    };
+  }
+  const schemaErrors = [...loaded.errors, ...checkSchema(loaded.ir as SchemaIr)];
+  if (schemaErrors.length > 0) {
+    return { exitCode: 1, lines: groupByFile(schemaErrors), errors: schemaErrors };
+  }
+  try {
+    const result = reindex(loaded.ir as SchemaIr, resolveProjectPath(project));
+    return {
+      exitCode: 0,
+      lines: [`✓ 索引已重建：${result.tables} 表 / ${result.rows} 行 / ${result.edges} 条引用边`],
+      errors: [],
+    };
+  } catch (err) {
+    return {
+      exitCode: 2,
+      lines: [`索引重建失败：${err instanceof Error ? err.message : String(err)}`],
+      errors: [],
+    };
+  }
+}
+
 export async function runCli(argv: string[]): Promise<number> {
   let lastExit = 0;
   // 兼容 `pnpm cli -- check-schema ...`：pnpm 11 会把首个 `--` 原样转发
@@ -155,6 +185,16 @@ export async function runCli(argv: string[]): Promise<number> {
     .argument('<project>', '配置项目根目录（含 schema/ 子目录）')
     .action((project: string) => {
       const run = runCheckSchema(project);
+      for (const line of run.lines) console.log(line);
+      lastExit = run.exitCode;
+    });
+
+  program
+    .command('reindex')
+    .description('重建 SQLite 派生索引（gcb.db，可随时删除）')
+    .argument('<project>', '配置项目根目录')
+    .action((project: string) => {
+      const run = runReindex(project);
       for (const line of run.lines) console.log(line);
       lastExit = run.exitCode;
     });

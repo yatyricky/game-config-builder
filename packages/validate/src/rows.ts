@@ -35,6 +35,9 @@ export interface TypedRow {
   line: number;
 }
 
+/** 主键的运行时形态（int 表 → number；string 表 → string） */
+export type RowPk = number | string;
+
 export interface TypeRowsResult {
   rows: TypedRow[];
   errors: ValidationError[];

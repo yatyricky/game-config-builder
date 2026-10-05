@@ -11,5 +11,8 @@
   },
   "dependencies": {
     "@gcb/schema": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4"
   }
 }

@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@gcb/schema": "workspace:*",
-    "@gcb/validate": "workspace:*"
+    "@gcb/validate": "workspace:*",
+    "better-sqlite3": "^13.0.3"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^26.6.4"
   }
 }
