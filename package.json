@@ -1,0 +1,17 @@
+{
+  "name": "game-config-builder",
+  "private": true,
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter @gcb/web dev",
+    "dev:server": "pnpm --filter @gcb/server dev",
+    "test": "vitest run",
+    "test:update-goldens": "cross-env UPDATE_GOLDENS=1 vitest run",
+    "test:e2e": "pnpm --filter @gcb/web test:e2e",
+    "lint": "eslint . && prettier --check .",
+    "cli": "pnpm --filter @gcb/cli cli"
+  }
+}
