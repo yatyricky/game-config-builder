@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.zcode/
+pnpm-lock.yaml
+
+# 散文文档不做格式化，避免 churn
+docs/
+CHAT.md
+AGENTS.md
