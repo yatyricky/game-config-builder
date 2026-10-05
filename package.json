@@ -13,5 +13,8 @@
     "test:e2e": "pnpm --filter @gcb/web test:e2e",
     "lint": "eslint . && prettier --check .",
     "cli": "pnpm --filter @gcb/cli cli"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
   }
 }
