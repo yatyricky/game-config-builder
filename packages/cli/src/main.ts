@@ -179,6 +179,7 @@ export function runExportCli(
   project: string,
   targetNames: string[],
   outDirOverride: string | undefined,
+  incremental = false,
 ): CommandRun {
   const dirs = projectDirs(project);
   const outDir =
@@ -224,6 +225,7 @@ export function runExportCli(
       rawByTable,
       targets.filter((t) => t !== null),
       outDir,
+      { incremental },
     );
     if (!result.ok) {
       const lines = groupByFile(result.errors);
@@ -234,7 +236,9 @@ export function runExportCli(
     }
     return {
       exitCode: 0,
-      lines: [`✓ 导出完成：${result.files} 个文件 → ${outDir}`],
+      lines: [
+        `✓ 导出完成：${result.files} 个文件（写入 ${result.written}，跳过 ${result.files - result.written}）→ ${outDir}`,
+      ],
       errors: [],
     };
   } catch (err) {
@@ -295,12 +299,15 @@ export async function runCli(argv: string[]): Promise<number> {
     .argument('<project>', '配置项目根目录')
     .option('--target <targets>', '逗号分隔：json,lua,csharp', 'json,lua,csharp')
     .option('--out <dir>', '导出根目录（缺省 <project>/export）')
-    .action((project: string, options: { target?: string; out?: string }) => {
-      const targets = (options.target ?? 'json,lua,csharp').split(',').map((s) => s.trim());
-      const run = runExportCli(project, targets, options.out);
-      for (const line of run.lines) console.log(line);
-      lastExit = run.exitCode;
-    });
+    .option('--incremental', '增量模式：sourceHash 未变的文件跳过重写')
+    .action(
+      (project: string, options: { target?: string; out?: string; incremental?: boolean }) => {
+        const targets = (options.target ?? 'json,lua,csharp').split(',').map((s) => s.trim());
+        const run = runExportCli(project, targets, options.out, options.incremental === true);
+        for (const line of run.lines) console.log(line);
+        lastExit = run.exitCode;
+      },
+    );
 
   await program.parseAsync(cleanArgv, { from: 'user' });
   return lastExit;

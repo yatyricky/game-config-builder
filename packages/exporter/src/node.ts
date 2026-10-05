@@ -2,7 +2,15 @@
 // 浏览器代码不得引入本文件。
 
 import { createHash } from 'node:crypto';
-import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { SchemaIr, ValidationError } from '@gcb/schema';
 import type { RawRow, TypedRow } from '@gcb/validate';
@@ -25,16 +33,32 @@ export interface ExportRun {
   manifest: ManifestEntry[];
 }
 
+export interface ExportOptions {
+  /** T5.1 增量模式：与上次 manifest 对比，sourceHash 未变的文件跳过重写（mtime 保留） */
+  incremental?: boolean;
+}
+
+export interface ExportRun {
+  ok: boolean;
+  errors: ValidationError[];
+  /** 计划产物总数 */
+  files: number;
+  /** 本次实际写入数（增量模式下 < files） */
+  written: number;
+  manifest: ManifestEntry[];
+}
+
 /** 导出即编译（§8.1）：error 级校验失败即止、无部分产物（临时目录 + 原子替换） */
 export function runExport(
   ir: SchemaIr,
   rawByTable: Map<string, RawRow[]>,
   targets: TargetPlugin[],
   outDir: string,
+  options: ExportOptions = {},
 ): ExportRun {
   const errors = validateFull(ir, rawByTable);
   if (errors.some((e) => e.severity === 'error')) {
-    return { ok: false, errors, files: 0, manifest: [] };
+    return { ok: false, errors, files: 0, written: 0, manifest: [] };
   }
   const tables = new Map<string, TypedRow[]>();
   for (const [name, raw] of rawByTable) {
@@ -65,18 +89,53 @@ export function runExport(
   });
   const manifestJson = JSON.stringify(manifest, null, 2) + '\n';
 
+  // 增量：上次 manifest 中 sourceHash 一致且文件仍在磁盘上的条目，直接复制旧文件（保 mtime）
+  const previous = new Map<string, string>();
+  if (options.incremental === true) {
+    const prevManifestPath = join(outDir, 'manifest.json');
+    if (existsSync(prevManifestPath)) {
+      try {
+        const parsed: unknown = JSON.parse(readFileSync(prevManifestPath, 'utf8'));
+        if (Array.isArray(parsed)) {
+          for (const entry of parsed as Array<{ file?: unknown; sourceHash?: unknown }>) {
+            if (typeof entry.file === 'string' && typeof entry.sourceHash === 'string') {
+              previous.set(entry.file, entry.sourceHash);
+            }
+          }
+        }
+      } catch {
+        // manifest 损坏 → 退化为全量
+      }
+    }
+  }
+
   const tmp = outDir + '.tmp';
   rmSync(tmp, { recursive: true, force: true });
   mkdirSync(tmp, { recursive: true });
+  let written = 0;
+  const manifestByFile = new Map(manifest.map((m) => [m.file, m]));
   for (const file of plan.files) {
     const target = join(tmp, file.path);
     mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, file.content, 'utf8');
+    const entry = manifestByFile.get(file.path);
+    const prevSourceHash = previous.get(file.path);
+    const prevFile = outDir + '/' + file.path;
+    if (
+      options.incremental === true &&
+      entry !== undefined &&
+      prevSourceHash === entry.sourceHash &&
+      existsSync(prevFile)
+    ) {
+      copyFileSync(prevFile, target);
+    } else {
+      writeFileSync(target, file.content, 'utf8');
+      written++;
+    }
   }
   writeFileSync(join(tmp, 'manifest.json'), manifestJson, 'utf8');
   rmSync(outDir, { recursive: true, force: true });
   renameSync(tmp, outDir);
-  return { ok: true, errors: [], files: plan.files.length, manifest };
+  return { ok: true, errors: [], files: plan.files.length, written, manifest };
 }
 
 function tableOfPath(path: string): string {
