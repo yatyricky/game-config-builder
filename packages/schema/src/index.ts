@@ -1,1 +1,27 @@
 export const PACKAGE_NAME = '@gcb/schema';
+
+export type {
+  Severity,
+  SourceRef,
+  PrimitiveTypeName,
+  MapKeyTypeName,
+  PrimitiveTypeAst,
+  EnumTypeAst,
+  StructTypeAst,
+  RefTypeAst,
+  UnionTypeAst,
+  ListTypeAst,
+  MapTypeAst,
+  TypeAst,
+  LiteralValue,
+  EnumValueDef,
+  EnumDef,
+  FieldDef,
+  StructDef,
+  UnionVariantDef,
+  UnionDef,
+  RowRuleDef,
+  TableDef,
+  TypeDef,
+  SchemaIr,
+} from './ir.js';
