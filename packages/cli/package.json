@@ -6,7 +6,16 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "cli": "tsx src/main.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@gcb/schema": "workspace:*",
+    "commander": "^15.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "tsx": "^4.23.15"
   }
 }

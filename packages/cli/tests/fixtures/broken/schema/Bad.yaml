@@ -1,0 +1,5 @@
+tables:
+  T:
+    primaryKey: id
+   fields:
+      - { name: id, type: int }
