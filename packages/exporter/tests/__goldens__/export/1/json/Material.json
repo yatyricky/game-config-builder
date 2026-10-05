@@ -1,0 +1,21 @@
+{
+  "table": "Material",
+  "primaryKey": "id",
+  "rows": [
+    {
+      "id": 2001,
+      "name": "铁矿石",
+      "tier": 1
+    },
+    {
+      "id": 2002,
+      "name": "皮革",
+      "tier": 2
+    },
+    {
+      "id": 2003,
+      "name": "草药种子",
+      "tier": 1
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "table": "Skill",
+  "primaryKey": "id",
+  "rows": [
+    {
+      "id": 3001,
+      "name": "火球术",
+      "onUse": {
+        "effectType": "Damage",
+        "value": {
+          "power": 30,
+          "element": 1
+        }
+      },
+      "tags": [
+        "火",
+        "攻击"
+      ]
+    },
+    {
+      "id": 3002,
+      "name": "治疗术",
+      "onUse": {
+        "effectType": "Heal",
+        "value": {
+          "heal": 50,
+          "cure": false
+        }
+      },
+      "tags": [
+        "治疗"
+      ]
+    }
+  ]
+}

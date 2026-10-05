@@ -72,9 +72,15 @@ importers:
       '@gcb/data':
         specifier: workspace:*
         version: link:../data
+      '@gcb/exporter':
+        specifier: workspace:*
+        version: link:../exporter
       '@gcb/schema':
         specifier: workspace:*
         version: link:../schema
+      '@gcb/validate':
+        specifier: workspace:*
+        version: link:../validate
       commander:
         specifier: ^15.0.0
         version: 15.0.0
@@ -105,7 +111,18 @@ importers:
         specifier: ^26.6.4
         version: 26.6.4
 
-  packages/exporter: {}
+  packages/exporter:
+    dependencies:
+      '@gcb/schema':
+        specifier: workspace:*
+        version: link:../schema
+      '@gcb/validate':
+        specifier: workspace:*
+        version: link:../validate
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.4
+        version: 26.6.4
 
   packages/grid: {}
 

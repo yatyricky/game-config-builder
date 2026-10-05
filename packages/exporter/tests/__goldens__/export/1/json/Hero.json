@@ -1,0 +1,30 @@
+{
+  "table": "Hero",
+  "primaryKey": "id",
+  "rows": [
+    {
+      "id": 4001,
+      "name": "李逍遥",
+      "level": 35,
+      "quality": 0,
+      "equipment": {
+        "1": 1001,
+        "2": 1002
+      },
+      "skillIds": [
+        3001,
+        3002
+      ]
+    },
+    {
+      "id": 4002,
+      "name": "赵灵儿",
+      "level": 28,
+      "quality": 2,
+      "equipment": {},
+      "skillIds": [
+        3002
+      ]
+    }
+  ]
+}

@@ -1,9 +1,12 @@
 import { Command } from 'commander';
+import { existsSync, readFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { checkSchema, type SchemaIr, type ValidationError } from '@gcb/schema';
 import { loadSchemaDir } from '@gcb/schema/node';
-import { loadTable, normalizedContent, reindex, writeTableNormalized } from '@gcb/data';
+import { loadTable, normalizedContent, parseJsonl, reindex, writeTableNormalized } from '@gcb/data';
+import { csharpTarget, jsonTarget, luaTarget, runExport } from '@gcb/exporter';
+import type { RawRow } from '@gcb/validate';
 
 /**
  * gcb CLI（docs/02 §8 约定：exit 0 成功 / 1 校验失败 / 2 用法或内部错误）。
@@ -172,6 +175,82 @@ export function runReindex(project: string): CommandRun {
   }
 }
 
+export function runExportCli(
+  project: string,
+  targetNames: string[],
+  outDirOverride: string | undefined,
+): CommandRun {
+  const dirs = projectDirs(project);
+  const outDir =
+    outDirOverride !== undefined
+      ? resolveProjectPath(outDirOverride)
+      : join(resolveProjectPath(project), 'export');
+  const loaded = loadProjectSchema(dirs.schemaDir);
+  if (loaded.ioError !== undefined) {
+    return {
+      exitCode: 2,
+      lines: [`无法读取 schema 目录：${dirs.schemaDir}（${loaded.ioError}）`],
+      errors: [],
+    };
+  }
+  const ir = loaded.ir as SchemaIr;
+  const schemaErrors = [...loaded.errors, ...checkSchema(ir)];
+  if (schemaErrors.length > 0) {
+    return { exitCode: 1, lines: groupByFile(schemaErrors), errors: schemaErrors };
+  }
+  const targets = targetNames.map((name) => {
+    if (name === 'json') return jsonTarget;
+    if (name === 'lua') return luaTarget;
+    if (name === 'csharp') return csharpTarget({ namespace: 'GameConfig' });
+    return null;
+  });
+  const unknown = targetNames.filter((n) => n !== 'json' && n !== 'lua' && n !== 'csharp');
+  if (unknown.length > 0) {
+    return {
+      exitCode: 2,
+      lines: [`未知 target：${unknown.join(', ')}（可用：json,lua,csharp）`],
+      errors: [],
+    };
+  }
+  const rawByTable = new Map<string, RawRow[]>();
+  for (const name of Object.keys(ir.tables)) {
+    const table = ir.tables[name];
+    if (table === undefined) continue;
+    rawByTable.set(name, readRawRows(join(dirs.dataDir, `${name}.jsonl`), name));
+  }
+  try {
+    const result = runExport(
+      ir,
+      rawByTable,
+      targets.filter((t) => t !== null),
+      outDir,
+    );
+    if (!result.ok) {
+      const lines = groupByFile(result.errors);
+      lines.push(
+        `导出中止：共 ${result.errors.filter((e) => e.severity === 'error').length} 个错误（导出即编译，§8.1）`,
+      );
+      return { exitCode: 1, lines, errors: result.errors };
+    }
+    return {
+      exitCode: 0,
+      lines: [`✓ 导出完成：${result.files} 个文件 → ${outDir}`],
+      errors: [],
+    };
+  } catch (err) {
+    return {
+      exitCode: 2,
+      lines: [`导出失败：${err instanceof Error ? err.message : String(err)}`],
+      errors: [],
+    };
+  }
+}
+
+function readRawRows(file: string, tableName: string): RawRow[] {
+  if (!existsSync(file)) return [];
+  return parseJsonl(tableName, readFileSync(file, 'utf8')).rows;
+}
+
 export async function runCli(argv: string[]): Promise<number> {
   let lastExit = 0;
   // 兼容 `pnpm cli -- check-schema ...`：pnpm 11 会把首个 `--` 原样转发
@@ -206,6 +285,19 @@ export async function runCli(argv: string[]): Promise<number> {
     .option('--fix', '自动修复可修复项（行序规范化）')
     .action((project: string, options: { fix?: boolean }) => {
       const run = runValidate(project, options.fix === true);
+      for (const line of run.lines) console.log(line);
+      lastExit = run.exitCode;
+    });
+
+  program
+    .command('export')
+    .description('导出（导出即编译：全量校验通过才产出）')
+    .argument('<project>', '配置项目根目录')
+    .option('--target <targets>', '逗号分隔：json,lua,csharp', 'json,lua,csharp')
+    .option('--out <dir>', '导出根目录（缺省 <project>/export）')
+    .action((project: string, options: { target?: string; out?: string }) => {
+      const targets = (options.target ?? 'json,lua,csharp').split(',').map((s) => s.trim());
+      const run = runExportCli(project, targets, options.out);
       for (const line of run.lines) console.log(line);
       lastExit = run.exitCode;
     });
