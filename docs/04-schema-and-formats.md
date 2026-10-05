@@ -51,16 +51,6 @@ structs:
     fields:
       - { name: itemId, type: "ref<Item>", rule: "count <= 10 || itemId != 9001" }
       - { name: count, type: int, default: 1, range: [1, 9999] }
-
-unions:
-  SkillEffect:
-    comment: 技能效果（tag 多态）
-    tag: effectType
-    variants:
-      - { name: Damage, struct: DamageParams }
-      - { name: Heal, struct: HealParams }
-
-structs:
   DamageParams:
     fields:
       - { name: power, type: int, range: [0, 999999] }
@@ -69,6 +59,14 @@ structs:
     fields:
       - { name: heal, type: int, range: [1, 999999] }
       - { name: cure Poison, type: bool, default: false }   # ← 非法示例：字段名不得含空格
+
+unions:
+  SkillEffect:
+    comment: 技能效果（tag 多态）
+    tag: effectType
+    variants:
+      - { name: Damage, struct: DamageParams }
+      - { name: Heal, struct: HealParams }
 
 tables:
   Item:
