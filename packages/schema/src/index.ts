@@ -31,3 +31,6 @@ export type { ValidationError } from './errors.js';
 
 export { loadSchema } from './load.js';
 export type { LoadSchemaResult } from './load.js';
+
+export { parseTypeString, resolveTypes } from './type-parse.js';
+export type { TypeParseResult } from './type-parse.js';
