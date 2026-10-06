@@ -65,7 +65,7 @@ export function App() {
           {result.issues.length > 0 && <pre className="issues">{summarize(result)}</pre>}
           {table && structDef ? (
             <div className="grid-area">
-              <Grid table={table} def={structDef} />
+              <Grid key={table.name} table={table} def={structDef} />
             </div>
           ) : (
             <p>{selected ? `表格 ${selected} 缺少对应的 struct 类型` : '工程中没有表格'}</p>

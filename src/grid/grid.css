@@ -36,6 +36,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   background: #fff;
+  cursor: var(--cursor-cell, cell);
+}
+
+.focused {
+  outline: 2px solid #111;
+  outline-offset: -2px;
+  position: relative;
+  z-index: 2;
 }
 
 .row-head {
@@ -45,6 +53,7 @@
   background: #f7f7f7;
   color: #666;
   text-align: right;
+  cursor: var(--cursor-row, default);
 }
 
 .corner {
@@ -52,11 +61,13 @@
   left: 0;
   z-index: 1;
   background: #f7f7f7;
+  cursor: default;
 }
 
 .col-head {
   background: #f7f7f7;
   font-weight: 600;
+  cursor: var(--cursor-col, default);
 }
 
 .notimpl {
