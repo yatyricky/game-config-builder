@@ -1,9 +1,0 @@
-tables:
-  Material:
-    comment: 合成材料表
-    primaryKey: id
-    displayField: name
-    fields:
-      - { name: id, type: int, range: [1, 999999] }
-      - { name: name, type: string, maxLength: 64, unique: true }
-      - { name: tier, type: int, range: [1, 10], default: 1 }

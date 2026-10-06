@@ -1,9 +1,0 @@
-node_modules/
-dist/
-gcb.db
-*.tsbuildinfo
-.zcode/
-
-# playwright
-apps/web/test-results/
-apps/web/playwright-report/
