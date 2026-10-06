@@ -237,3 +237,69 @@ export async function saveRow(
   const body = (await res.json()) as { errors: ValidationError[] };
   return { ok: false, errors: body.errors };
 }
+
+/** 删除行：先问 server（422 = 被引用）；成功后从本地会话移除 */
+export async function deleteRow(
+  session: ProjectSession,
+  tableName: string,
+  pk: string,
+): Promise<
+  | { ok: true }
+  | {
+      ok: false;
+      reason?: string;
+      backrefs: Array<{ fromTable: string; fromPk: string; fromField: string }>;
+    }
+> {
+  const res = await fetch(`/api/tables/${tableName}/rows/${pk}`, { method: 'DELETE' });
+  if (res.status === 200) {
+    const ts = session.tables.get(tableName);
+    if (ts !== undefined) {
+      const idx = ts.rows.findIndex((r) => r.pk === pk);
+      if (idx >= 0) ts.rows.splice(idx, 1);
+    }
+    return { ok: true };
+  }
+  if (res.status === 422) {
+    const body = (await res.json()) as {
+      reason: string;
+      backrefs: Array<{ fromTable: string; fromPk: string; fromField: string }>;
+    };
+    return { ok: false, reason: body.reason, backrefs: body.backrefs };
+  }
+  return { ok: false, backrefs: [] };
+}
+
+/** xlsx 文件 → 行对象数组（列名 = schema 字段名；T7.5/M11 导入桥接） */
+export async function importXlsx(
+  session: ProjectSession,
+  tableName: string,
+  file: File,
+): Promise<{ rows: Array<Record<string, unknown>>; unmatched: string[] }> {
+  const XLSX = await import('xlsx');
+  const buffer = await file.arrayBuffer();
+  const wb = XLSX.read(buffer);
+  const sheetName = wb.SheetNames[0];
+  if (sheetName === undefined) return { rows: [], unmatched: [] };
+  const sheet = wb.Sheets[sheetName];
+  if (sheet === undefined) return { rows: [], unmatched: [] };
+  const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: undefined });
+  const table = session.tables.get(tableName)?.table;
+  const fieldNames = new Set((table?.fields ?? []).map((f) => f.name));
+  const unmatched = new Set<string>();
+  const rows: Array<Record<string, unknown>> = [];
+  for (const item of json) {
+    const out: Record<string, unknown> = {};
+    let hasAny = false;
+    for (const [key, value] of Object.entries(item)) {
+      if (fieldNames.has(key)) {
+        out[key] = value;
+        hasAny = true;
+      } else {
+        unmatched.add(key);
+      }
+    }
+    if (hasAny) rows.push(out);
+  }
+  return { rows, unmatched: [...unmatched] };
+}

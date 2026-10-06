@@ -24,6 +24,7 @@
   "dependencies": {
     "@gcb/grid": "workspace:*",
     "@gcb/schema": "workspace:*",
-    "@gcb/validate": "workspace:*"
+    "@gcb/validate": "workspace:*",
+    "xlsx": "^0.18.5"
   }
 }

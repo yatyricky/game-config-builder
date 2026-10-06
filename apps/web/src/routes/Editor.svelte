@@ -6,6 +6,8 @@
   import { exposeForDebug } from '../lib/session';
   import {
     cellText,
+    deleteRow,
+    importXlsx,
     loadProjectSession,
     parseCellInput,
     saveRow,
@@ -204,6 +206,78 @@
   }
 
   let errorPanelOpen = $state(true);
+  let cursorRowIdx = $state(0);
+
+  // M11：行删除（先问反引，被引用则列出并拒绝）
+  let deleteNotice = $state('');
+  async function deleteCurrentRow(): Promise<void> {
+    if (currentTableName === undefined || session === undefined) return;
+    const row = currentTable?.rows[cursorRowIdx];
+    if (row === undefined) return;
+    const result = await deleteRow(session, currentTableName, row.pk);
+    if (result.ok) {
+      deleteNotice = `已删除 ${row.pk}`;
+      const ts = session.tables.get(currentTableName);
+      if (ts !== undefined) {
+        rebuildGridRows(ts);
+        validation = validateSessionAll(session);
+      }
+    } else {
+      deleteNotice =
+        result.reason === 'referenced'
+          ? `删除被拒：${row.pk} 被引用——${result.backrefs.map((b) => `${b.fromTable}#${b.fromPk}`).join('、')}`
+          : '删除失败';
+    }
+  }
+
+  // M11：xlsx 导入（列名匹配 schema 字段名，行走同一 parse；失败行标错，成功行 dirty 待保存）
+  let importNotice = $state('');
+  async function handleImportFile(event: Event): Promise<void> {
+    const inputEl = event.currentTarget as HTMLInputElement;
+    const file = inputEl.files?.[0];
+    if (file === undefined || currentTableName === undefined || session === undefined || currentTable === undefined) return;
+    const { rows, unmatched } = await importXlsx(session, currentTableName, file);
+    if (rows.length === 0) {
+      importNotice = '导入文件无有效行（列名需与字段名一致）';
+      return;
+    }
+    let applied = 0;
+    const failed: string[] = [];
+    for (const item of rows) {
+      const pkRaw = item[currentTable.table.primaryKey];
+      if (pkRaw === undefined) {
+        failed.push('(缺主键)');
+        continue;
+      }
+      const pk = String(pkRaw);
+      const target = currentTable.rows.find((r) => r.pk === pk);
+      if (target === undefined) {
+        failed.push(`#${pk} 不存在（暂不支持导入新行）`);
+        continue;
+      }
+      let ok = true;
+      for (const [fieldName, value] of Object.entries(item)) {
+        if (fieldName === currentTable.table.primaryKey) continue;
+        const col = currentTable.columns.find((c) => c.name === fieldName);
+        if (col === undefined) continue;
+        const parsed = parseCellInput(col.ast, session.ir, String(value));
+        if (!parsed.ok) {
+          ok = false;
+          failed.push(`#${pk}.${fieldName}: ${parsed.error}`);
+          break;
+        }
+        target.row = { ...target.row, [fieldName]: parsed.value };
+      }
+      if (ok) {
+        target.dirty = true;
+        applied++;
+      }
+    }
+    rebuildGridRows(currentTable);
+    validation = validateSessionAll(session);
+    importNotice = `导入 ${applied} 行（待保存）` + (failed.length > 0 ? `；${failed.length} 行失败` : '') + (unmatched.length > 0 ? `；未匹配列：${unmatched.join(',')}` : '');
+    inputEl.value = '';
+  }
 </script>
 
 <main>
@@ -215,9 +289,20 @@
     {:else if session !== undefined}
       <span>{statusText}</span>
       <button type="button" disabled={saving} onclick={saveDirty}>保存（PUT + 哈希护栏）</button>
+      <button type="button" onclick={deleteCurrentRow}>删除当前行</button>
+      <label class="import-label">
+        导入 xlsx
+        <input type="file" accept=".xlsx,.xls" hidden onchange={handleImportFile} />
+      </label>
       <button type="button" onclick={() => (errorPanelOpen = !errorPanelOpen)}>
         错误面板（{validation.errors.length}）
       </button>
+    {/if}
+    {#if deleteNotice !== ''}
+      <span class="notice">{deleteNotice}</span>
+    {/if}
+    {#if importNotice !== ''}
+      <span class="notice">{importNotice}</span>
     {/if}
   </header>
 
@@ -250,6 +335,7 @@
           onCommit={handleCommit}
           cellClassName={cellClassName}
           onCellClick={(rowIdx, colIdx) => {
+            cursorRowIdx = rowIdx;
             if (isRefCol(colIdx)) void openPeek(rowIdx, colIdx);
           }}
         />
@@ -329,6 +415,17 @@
   h1 {
     font-size: 15px;
     margin: 0;
+  }
+  .notice {
+    font-size: 12px;
+    color: #92400e;
+  }
+  .import-label {
+    cursor: pointer;
+    padding: 4px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 12px;
   }
   .error-banner {
     color: #dc2626;

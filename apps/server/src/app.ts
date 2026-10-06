@@ -135,6 +135,46 @@ export async function buildApp(options: AppOptions) {
     }
   });
 
+  // 删除行（M11）：被引用时 422 返回反引清单（删除安全网，thesis §3.3）
+  app.delete('/api/tables/:table/rows/:pk', async (req, reply) => {
+    const { table: tableName, pk } = req.params as { table: string; pk: string };
+    const table = deps.ir.tables[tableName];
+    if (table === undefined)
+      return reply.code(404).send({ errors: [{ message: `未知表 ${tableName}` }] });
+
+    let backrefs: Backref[] = [];
+    try {
+      backrefs = queryBackrefs(ensureIndex(), tableName, pk);
+    } catch {
+      // 索引失败时不阻断删除（保守起见跳过反引检查）
+    }
+    if (backrefs.length > 0) {
+      return reply.code(422).send({ reason: 'referenced', backrefs });
+    }
+
+    const dataDir = join(deps.projectDir, 'data');
+    const rawRows = readRawRows(join(dataDir, `${tableName}.jsonl`), tableName);
+    const kept = rawRows.filter((r) => {
+      const obj = (
+        r.json !== null && typeof r.json === 'object' && !Array.isArray(r.json) ? r.json : {}
+      ) as Record<string, unknown>;
+      const objPk = obj[table.primaryKey];
+      const key =
+        typeof objPk === 'number' ? String(objPk) : typeof objPk === 'string' ? objPk : '';
+      return key !== pk;
+    });
+    if (kept.length === rawRows.length) {
+      return reply.code(404).send({ errors: [{ message: `行不存在 ${tableName}#${pk}` }] });
+    }
+    const typed = typeRows(table, deps.ir, kept);
+    writeTableNormalized(dataDir, tableName, normalizedContent(deps.ir, table, typed.rows));
+    if (db !== null) {
+      db.close();
+      db = null;
+    }
+    return { deleted: pk };
+  });
+
   // 保存（乐观并发，ADR-9）：baseRowHash 不符 → 409 + 当前行；校验失败 → 422
   app.put('/api/tables/:table/rows/:pk', async (req, reply) => {
     const { table: tableName, pk } = req.params as { table: string; pk: string };

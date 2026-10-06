@@ -118,3 +118,16 @@ it('保存后数据文件规范化（键序/排序）', async () => {
   const data = readFileSync(join(project, 'data', 'Item.jsonl'), 'utf8');
   expect(data.startsWith('{"id":1001')).toBe(true);
 });
+
+it('DELETE：被引用行 422 + 反引清单；无引用行删除成功', async () => {
+  const referenced = await app.inject({ method: 'DELETE', url: '/api/tables/Item/rows/1001' });
+  expect(referenced.statusCode).toBe(422);
+  const body = referenced.json() as { reason: string; backrefs: unknown[] };
+  expect(body.reason).toBe('referenced');
+  expect(body.backrefs.length).toBeGreaterThan(0);
+
+  const ok = await app.inject({ method: 'DELETE', url: '/api/tables/Text/rows/ui.settings' });
+  expect(ok.statusCode).toBe(200);
+  const gone = await app.inject({ method: 'GET', url: '/api/tables/Text/rows/ui.settings' });
+  expect(gone.statusCode).toBe(404);
+});
