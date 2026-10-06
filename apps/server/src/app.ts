@@ -2,8 +2,10 @@
 // 无 ws、无锁、无 presence——server 是薄 API 层，业务全在 packages。
 
 import Fastify from 'fastify';
-import { join, resolve } from 'node:path';
+import fastifyStatic from '@fastify/static';
+import { dirname, join, resolve } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { checkSchema, type SchemaIr, type TableDef, type ValidationError } from '@gcb/schema';
 import { loadSchemaDir } from '@gcb/schema/node';
 import { typeRows, validateFull, type RawRow } from '@gcb/validate';
@@ -44,9 +46,37 @@ export interface AppOptions {
   projectDir: string;
 }
 
+/** 编辑器构建产物目录：env GCB_WEB_DIST 优先；默认相对本文件（免疫 cwd） */
+function resolveWebDist(): string {
+  if (process.env['GCB_WEB_DIST'] !== undefined) {
+    return resolve(process.env['GCB_WEB_DIST']);
+  }
+  const here = dirname(fileURLToPath(import.meta.url));
+  return resolve(here, '../../web/dist');
+}
+
 export async function buildApp(options: AppOptions) {
   const deps = loadProject(options.projectDir);
   const app = Fastify({ logger: false });
+
+  // 单进程托管双端（ADR-3）：dist 存在则托管编辑器静态资源 + SPA fallback；
+  // 不存在则降级为仅 API 模式（提示构建），不报错退出。
+  const webDist = resolveWebDist();
+  const webServed = existsSync(join(webDist, 'index.html'));
+  if (webServed) {
+    await app.register(fastifyStatic, { root: webDist, wildcard: false });
+    app.setNotFoundHandler((req, reply) => {
+      if (req.raw.url !== undefined && req.raw.url.startsWith('/api/')) {
+        void reply.code(404).send({ errors: [{ message: `未知 API：${req.raw.url}` }] });
+        return;
+      }
+      if (req.method === 'GET') {
+        void reply.type('text/html').send(readFileSync(join(webDist, 'index.html')));
+        return;
+      }
+      void reply.code(404).send({ errors: [{ message: 'not found' }] });
+    });
+  }
 
   let db: ReturnType<typeof openIndex> | null = null;
   const ensureIndex = (): ReturnType<typeof openIndex> => {
@@ -266,5 +296,5 @@ export async function buildApp(options: AppOptions) {
     db?.close();
   });
 
-  return { app, deps };
+  return { app, deps, webServed, webDist };
 }

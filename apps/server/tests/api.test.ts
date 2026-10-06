@@ -3,7 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { afterAll, beforeAll, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { existsSync } from 'node:fs';
 import { buildApp } from '../src/app.js';
 
 const DEMO = fileURLToPath(new URL('../../../examples/demo', import.meta.url));
@@ -13,6 +14,7 @@ let app: Awaited<ReturnType<typeof buildApp>>['app'];
 beforeAll(async () => {
   project = join(tmpdir(), `gcb-server-${randomUUID()}`);
   cpSync(DEMO, project, { recursive: true });
+  process.env['GCB_WEB_DIST'] = fileURLToPath(new URL('../../../apps/web/dist', import.meta.url));
   const built = await buildApp({ projectDir: project });
   app = built.app;
   await app.ready();
@@ -130,4 +132,25 @@ it('DELETE：被引用行 422 + 反引清单；无引用行删除成功', async 
   expect(ok.statusCode).toBe(200);
   const gone = await app.inject({ method: 'GET', url: '/api/tables/Text/rows/ui.settings' });
   expect(gone.statusCode).toBe(404);
+});
+
+// 单进程托管双端（生产模式冒烟）：dist 未构建时跳过
+const WEB_INDEX = new URL('../../../apps/web/dist/index.html', import.meta.url);
+const WEB_SERVED = existsSync(fileURLToPath(WEB_INDEX));
+
+describe.skipIf(!WEB_SERVED)('单进程托管双端（生产模式）', () => {
+  it('GET /edit：SPA fallback 返回编辑器 HTML；未知 API 仍 404 JSON', async () => {
+    const edit = await app.inject({ method: 'GET', url: '/edit' });
+    expect(edit.statusCode).toBe(200);
+    expect(edit.headers['content-type']).toContain('text/html');
+    expect(edit.body).toContain('id="app"');
+
+    const root = await app.inject({ method: 'GET', url: '/' });
+    expect(root.statusCode).toBe(200);
+    expect(root.body).toContain('id="app"');
+
+    const unknownApi = await app.inject({ method: 'GET', url: '/api/no-such-endpoint' });
+    expect(unknownApi.statusCode).toBe(404);
+    expect(unknownApi.headers['content-type']).toContain('application/json');
+  });
 });

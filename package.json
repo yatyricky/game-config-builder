@@ -15,7 +15,9 @@
     "test:e2e": "pnpm --filter @gcb/web test:e2e",
     "lint": "eslint . && prettier --check .",
     "typecheck": "pnpm -r --if-present run typecheck",
-    "cli": "pnpm --filter @gcb/cli cli"
+    "cli": "pnpm --filter @gcb/cli cli",
+    "build": "pnpm --filter @gcb/web build",
+    "start": "pnpm --filter @gcb/server start"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

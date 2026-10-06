@@ -63,6 +63,8 @@ game-config-builder/
 | `pnpm dev:server` | server 开发服（tsx watch） |
 | `pnpm cli -- <子命令>` | 本地运行 gcb CLI（如 `pnpm cli -- validate examples/demo`） |
 | `pnpm test:e2e` | Playwright e2e + 性能预算（仅 apps/web） |
+| `pnpm build` | 构建编辑器产物（apps/web/dist） |
+| `pnpm start` | 单进程启动：server 托管 API + 编辑器（生产/部署模式） |
 
 ## 5. 任务卡协议（工作流）
 
