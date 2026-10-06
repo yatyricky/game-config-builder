@@ -19,12 +19,13 @@
 ## M1 数据层（打开工程）
 
 - 目标：经 File System Access API 打开本地工程目录，得到通过校验的内存模型。
-- 范围：目录选择；读取并合并 `schema/*.json`；类型系统解析（enum 含 flags、struct、pk、map/array 字段、displayName）；读取工程根目录 `<SheetName>.json`（JSONL）表格数据；schema 静态校验与错误报告。
+- 范围：目录选择；读取并合并 `schema/*.json`；类型系统解析（enum 含 flags、struct、pk、map/array 字段、displayName）；读取工程根目录 `<SheetName>.json`（JSONL）表格数据；schema 静态校验与错误报告；浏览器临时调试入口（「打开工程」按钮：FSA 授权 → 解析 → 文本摘要，M2 起由真实网格替代）。
 - 验收：
   - [ ] 打开符合 spec 目录 layout 的工程，解析出全部 schema 类型与表格数据
   - [ ] spec 中 School / Effect / Skill 样例（schema 与 jsonl 原文）解析结果与样例一致
   - [ ] 违规 schema 给出明确错误：pk 字段非 string、自定义类型名与 JS 基础类型冲突、引用不存在的类型
   - [ ] 未经用户授权不触碰目录外任何文件
+  - [ ] 浏览器（npm run dev）点击「打开工程」→ 授权弹窗 → 选择 sample/ → 摘要显示 3 类型 2 表且无问题
 - spec 依据：数据一节全部；「后端（File System Access API）」。
 - 依赖：M0。
 
