@@ -47,7 +47,7 @@ export function Grid({ table, def }: GridProps) {
     })
     rows.push(
       <div key={i} className="grid-row" style={{ top: i * ROW_HEIGHT, width }}>
-        <div className="cell row-head">{i + 1}</div>
+        <div className="cell row-head" style={{ width: ROW_HEADER_WIDTH }}>{i + 1}</div>
         {cells}
       </div>,
     )
