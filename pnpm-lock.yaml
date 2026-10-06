@@ -32,6 +32,15 @@ importers:
 
   apps/server:
     dependencies:
+      '@gcb/data':
+        specifier: workspace:*
+        version: link:../../packages/data
+      '@gcb/schema':
+        specifier: workspace:*
+        version: link:../../packages/schema
+      '@gcb/validate':
+        specifier: workspace:*
+        version: link:../../packages/validate
       fastify:
         specifier: ^5.12.5
         version: 5.12.5
