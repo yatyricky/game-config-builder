@@ -1,0 +1,49 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 8px;
+  padding: 8px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.error {
+  color: #c0392b;
+  margin: 0;
+}
+
+.issues {
+  margin: 0;
+  padding: 8px;
+  background: #fdf3e7;
+  border: 1px solid #f0d0b0;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.grid-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.grid-area > .grid-viewport {
+  flex: 1;
+  border: 1px solid #d0d0d0;
+}

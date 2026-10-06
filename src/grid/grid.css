@@ -1,0 +1,66 @@
+/* 行高/行头宽须与 layout.ts 的 ROW_HEIGHT / ROW_HEADER_WIDTH 一致 */
+.grid-viewport {
+  position: relative;
+  overflow: auto;
+  height: 100%;
+  background: #fff;
+}
+
+.grid-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  height: 24px;
+}
+
+.grid-canvas {
+  position: relative;
+}
+
+.grid-row {
+  position: absolute;
+  display: flex;
+  height: 24px;
+}
+
+.cell {
+  flex: none;
+  box-sizing: border-box;
+  padding: 0 6px;
+  border-right: 1px solid #e3e3e3;
+  border-bottom: 1px solid #e3e3e3;
+  line-height: 23px;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: #fff;
+}
+
+.row-head {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #f7f7f7;
+  color: #666;
+  text-align: right;
+}
+
+.corner {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #f7f7f7;
+}
+
+.col-head {
+  background: #f7f7f7;
+  font-weight: 600;
+}
+
+.notimpl {
+  color: #b3b3b3;
+  font-style: italic;
+  font-size: 12px;
+}
