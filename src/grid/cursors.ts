@@ -11,6 +11,13 @@
 const OLIVE_SHADOW = '#6e7e55'
 const OLIVE_EDGE = '#96ab73'
 
+/** 图形定义的基准空间（多边形坐标以此为准），渲染时整体缩放到目标尺寸 */
+const BASE = 28
+/** 目标 CSS 尺寸：28 缩小 20% */
+const CSS_SIZE = 22
+/** 超采样倍率：先高分辨率绘制再降采样，斜边更干净 */
+const SUPERSAMPLE = 2
+
 type Pt = readonly [number, number]
 
 const PLUS_PTS: Pt[] = [
@@ -26,24 +33,37 @@ function polygon(ctx: CanvasRenderingContext2D, pts: Pt[], ox = 0, oy = 0): void
 }
 
 interface CursorDrawing {
-  size: number
   hotspot: readonly [number, number]
   draw: (ctx: CanvasRenderingContext2D) => void
   fallback: string
 }
 
-function makeCursor(spec: CursorDrawing): string {
+function makeCursor(spec: CursorDrawing, dpr: number): string {
+  const px = Math.max(1, Math.round(CSS_SIZE * dpr))
+  const k = (CSS_SIZE * dpr) / BASE
+  // 高分辨率画布：目标位图 × 超采样
+  const ss = px * SUPERSAMPLE
   const canvas = document.createElement('canvas')
-  canvas.width = spec.size
-  canvas.height = spec.size
+  canvas.width = ss
+  canvas.height = ss
   const ctx = canvas.getContext('2d')
   if (!ctx) return spec.fallback
+  ctx.scale(k * SUPERSAMPLE, k * SUPERSAMPLE)
   spec.draw(ctx)
-  return `url(${canvas.toDataURL('image/png')}) ${spec.hotspot[0]} ${spec.hotspot[1]}, ${spec.fallback}`
+  const out = document.createElement('canvas')
+  out.width = px
+  out.height = px
+  const octx = out.getContext('2d')
+  if (!octx) return spec.fallback
+  octx.imageSmoothingEnabled = true
+  octx.imageSmoothingQuality = 'high'
+  octx.drawImage(canvas, 0, 0, px, px)
+  const hx = Math.round(spec.hotspot[0] * k)
+  const hy = Math.round(spec.hotspot[1] * k)
+  return `url(${out.toDataURL('image/png')}) ${hx} ${hy}, ${spec.fallback}`
 }
 
 const CELL_CURSOR: CursorDrawing = {
-  size: 28,
   hotspot: [12, 12],
   fallback: 'cell',
   draw: ctx => {
@@ -54,14 +74,13 @@ const CELL_CURSOR: CursorDrawing = {
     polygon(ctx, PLUS_PTS)
     ctx.fill()
     ctx.strokeStyle = '#000'
-    ctx.lineWidth = 1
+    ctx.lineWidth = 1.4
     polygon(ctx, PLUS_PTS)
     ctx.stroke()
   },
 }
 
 const COL_CURSOR: CursorDrawing = {
-  size: 28,
   hotspot: [13, 26],
   fallback: 'default',
   draw: ctx => {
@@ -69,14 +88,13 @@ const COL_CURSOR: CursorDrawing = {
     polygon(ctx, DOWN_PTS)
     ctx.fill()
     ctx.strokeStyle = OLIVE_EDGE
-    ctx.lineWidth = 1
+    ctx.lineWidth = 1.2
     polygon(ctx, DOWN_PTS)
     ctx.stroke()
   },
 }
 
 const ROW_CURSOR: CursorDrawing = {
-  size: 28,
   hotspot: [26, 13],
   fallback: 'default',
   draw: ctx => {
@@ -84,16 +102,18 @@ const ROW_CURSOR: CursorDrawing = {
     polygon(ctx, RIGHT_PTS)
     ctx.fill()
     ctx.strokeStyle = OLIVE_EDGE
-    ctx.lineWidth = 1
+    ctx.lineWidth = 1.2
     polygon(ctx, RIGHT_PTS)
     ctx.stroke()
   },
 }
 
-/** 把三个指针写入 root 的 CSS 变量（--cursor-cell / --cursor-col / --cursor-row），幂等可重复调用 */
+/** 把三个指针写入 root 的 CSS 变量（--cursor-cell / --cursor-col / --cursor-row），幂等可重复调用。
+ * 位图按 devicePixelRatio 输出：Chrome 将 cursor 位图按物理像素映射，高分屏需提供放大的位图才不发糊。 */
 export function applyGridCursors(root: HTMLElement | null): void {
   if (!root) return
-  root.style.setProperty('--cursor-cell', makeCursor(CELL_CURSOR))
-  root.style.setProperty('--cursor-col', makeCursor(COL_CURSOR))
-  root.style.setProperty('--cursor-row', makeCursor(ROW_CURSOR))
+  const dpr = Math.min(4, Math.max(1, window.devicePixelRatio || 1))
+  root.style.setProperty('--cursor-cell', makeCursor(CELL_CURSOR, dpr))
+  root.style.setProperty('--cursor-col', makeCursor(COL_CURSOR, dpr))
+  root.style.setProperty('--cursor-row', makeCursor(ROW_CURSOR, dpr))
 }
