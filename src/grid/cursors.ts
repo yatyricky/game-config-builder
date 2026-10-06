@@ -38,10 +38,10 @@ interface CursorDrawing {
   fallback: string
 }
 
-function makeCursor(spec: CursorDrawing, dpr: number): string {
-  const px = Math.max(1, Math.round(CSS_SIZE * dpr))
-  const k = (CSS_SIZE * dpr) / BASE
-  // 高分辨率画布：目标位图 × 超采样
+function makeCursor(spec: CursorDrawing): string {
+  const px = CSS_SIZE
+  const k = CSS_SIZE / BASE
+  // 超采样画布：目标位图 × SUPERSAMPLE，再高质量降采样
   const ss = px * SUPERSAMPLE
   const canvas = document.createElement('canvas')
   canvas.width = ss
@@ -109,11 +109,10 @@ const ROW_CURSOR: CursorDrawing = {
 }
 
 /** 把三个指针写入 root 的 CSS 变量（--cursor-cell / --cursor-col / --cursor-row），幂等可重复调用。
- * 位图按 devicePixelRatio 输出：Chrome 将 cursor 位图按物理像素映射，高分屏需提供放大的位图才不发糊。 */
+ * 位图按 CSS 尺寸输出（实测 Chrome 将 cursor 位图按 CSS 像素解释，DPR 放大会反而变大）；清晰度靠超采样降采样。 */
 export function applyGridCursors(root: HTMLElement | null): void {
   if (!root) return
-  const dpr = Math.min(4, Math.max(1, window.devicePixelRatio || 1))
-  root.style.setProperty('--cursor-cell', makeCursor(CELL_CURSOR, dpr))
-  root.style.setProperty('--cursor-col', makeCursor(COL_CURSOR, dpr))
-  root.style.setProperty('--cursor-row', makeCursor(ROW_CURSOR, dpr))
+  root.style.setProperty('--cursor-cell', makeCursor(CELL_CURSOR))
+  root.style.setProperty('--cursor-col', makeCursor(COL_CURSOR))
+  root.style.setProperty('--cursor-row', makeCursor(ROW_CURSOR))
 }
