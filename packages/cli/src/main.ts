@@ -1,10 +1,17 @@
 import { Command } from 'commander';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { checkSchema, type SchemaIr, type ValidationError } from '@gcb/schema';
 import { loadSchemaDir } from '@gcb/schema/node';
-import { loadTable, normalizedContent, parseJsonl, reindex, writeTableNormalized } from '@gcb/data';
+import {
+  loadTable,
+  normalizedContent,
+  parseJsonl,
+  reindex,
+  runMigrations,
+  writeTableNormalized,
+} from '@gcb/data';
 import { csharpTarget, jsonTarget, luaTarget, runExport } from '@gcb/exporter';
 import type { RawRow } from '@gcb/validate';
 
@@ -365,6 +372,109 @@ function readRows(path: string): Map<string, Record<string, unknown>> {
   return map;
 }
 
+/** T5.3 迁移：显式迁移文件 → 数据键重写/类型转换 → normalize + reindex（§10） */
+export function runMigrateCli(project: string): CommandRun {
+  const dirs = projectDirs(project);
+  const loaded = loadProjectSchema(dirs.schemaDir);
+  if (loaded.ioError !== undefined) {
+    return {
+      exitCode: 2,
+      lines: [`无法读取 schema 目录：${dirs.schemaDir}（${loaded.ioError}）`],
+      errors: [],
+    };
+  }
+  const ir = loaded.ir as SchemaIr;
+  const schemaErrors = [...loaded.errors, ...checkSchema(ir)];
+  if (schemaErrors.length > 0) {
+    return {
+      exitCode: 1,
+      lines: [...groupByFile(schemaErrors), 'schema 校验失败，先修正 schema 再迁移'],
+      errors: schemaErrors,
+    };
+  }
+  try {
+    const result = runMigrations(ir, resolveProjectPath(project));
+    return { exitCode: result.exitCode, lines: result.lines, errors: result.errors };
+  } catch (err) {
+    return {
+      exitCode: 2,
+      lines: [`迁移失败：${err instanceof Error ? err.message : String(err)}`],
+      errors: [],
+    };
+  }
+}
+
+/** T5.4 init：最小可用模板（2 表 schema + 数据），init 后三连命令可直接通过 */
+export function runInit(dest: string): CommandRun {
+  const target = resolveProjectPath(dest);
+  if (existsSync(join(target, 'schema'))) {
+    return { exitCode: 2, lines: [`目标目录已存在 schema/：${target}（拒绝覆盖）`], errors: [] };
+  }
+  const files: Array<[string, string]> = [
+    [
+      'schema/main.yaml',
+      [
+        'enums:',
+        '  Rarity:',
+        '    comment: 稀有度',
+        '    values:',
+        '      - { name: Common, value: 0 }',
+        '      - { name: Rare, value: 1 }',
+        'tables:',
+        '  Item:',
+        '    comment: 物品表（示例）',
+        '    primaryKey: id',
+        '    displayField: name',
+        '    fields:',
+        '      - { name: id, type: int, range: [1, 999999] }',
+        '      - { name: name, type: string, maxLength: 64 }',
+        '      - { name: rarity, type: "enum<Rarity>", default: Common }',
+        '      - { name: price, type: int, default: 0, rule: "price >= 0" }',
+        '',
+      ].join('\n'),
+    ],
+    [
+      'data/Item.jsonl',
+      ['{"id":1,"name":"木剑"}', '{"id":2,"name":"铁剑","rarity":"Rare","price":100}', ''].join(
+        '\n',
+      ),
+    ],
+    [
+      'README.md',
+      [
+        '# 配置项目',
+        '',
+        '常用命令：',
+        '',
+        '```',
+        'gcb check-schema .',
+        'gcb validate .',
+        'gcb export . --target json,lua,csharp',
+        '```',
+        '',
+      ].join('\n'),
+    ],
+  ];
+  try {
+    for (const [rel, content] of files) {
+      const path = join(target, rel);
+      mkdirSync(join(path, '..'), { recursive: true });
+      writeFileSync(path, content, 'utf8');
+    }
+    return {
+      exitCode: 0,
+      lines: [`✓ 已初始化配置项目：${target}（2 表模板：enum + 主档表 + 规则）`],
+      errors: [],
+    };
+  } catch (err) {
+    return {
+      exitCode: 2,
+      lines: [`init 失败：${err instanceof Error ? err.message : String(err)}`],
+      errors: [],
+    };
+  }
+}
+
 export async function runCli(argv: string[]): Promise<number> {
   let lastExit = 0;
   // 兼容 `pnpm cli -- check-schema ...`：pnpm 11 会把首个 `--` 原样转发
@@ -426,6 +536,26 @@ export async function runCli(argv: string[]): Promise<number> {
     .argument('<newDir>', '新导出目录')
     .action((oldDir: string, newDir: string) => {
       const run = runDiff(oldDir, newDir);
+      for (const line of run.lines) console.log(line);
+      lastExit = run.exitCode;
+    });
+
+  program
+    .command('migrate')
+    .description('应用显式迁移（rename-field / retype-field，§10）')
+    .argument('<project>', '配置项目根目录')
+    .action((project: string) => {
+      const run = runMigrateCli(project);
+      for (const line of run.lines) console.log(line);
+      lastExit = run.exitCode;
+    });
+
+  program
+    .command('init')
+    .description('初始化最小可用配置项目模板')
+    .argument('<dir>', '目标目录')
+    .action((dir: string) => {
+      const run = runInit(dir);
       for (const line of run.lines) console.log(line);
       lastExit = run.exitCode;
     });

@@ -12,7 +12,8 @@
   "dependencies": {
     "@gcb/schema": "workspace:*",
     "@gcb/validate": "workspace:*",
-    "better-sqlite3": "^13.0.3"
+    "better-sqlite3": "^13.0.3",
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

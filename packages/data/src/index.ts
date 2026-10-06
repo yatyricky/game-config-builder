@@ -7,3 +7,5 @@ export type { TableData } from './io.js';
 export { loadTable, writeTableNormalized, rowHash, normalizedContent } from './io.js';
 export type { Backref } from './sqlite.js';
 export { reindex, queryBackrefs, openIndex, schemaHash } from './sqlite.js';
+export type { Migration, MigrationOp, MigrateResult } from './migrate.js';
+export { loadMigrations, runMigrations } from './migrate.js';
