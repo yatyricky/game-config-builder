@@ -1,6 +1,6 @@
 # 概述
 
-这是一个游戏配置编辑器。底层数据逻辑：关系型数据库，source of truth: json格式的数据。编辑器：极其克制的电子表格，并非另一个excel online。架构：纯静态网站，浏览器通过File System Access API获取本地文件夹权限后进行I/O。pnpm, ts.
+这是一个游戏配置编辑器。底层数据逻辑：关系型数据库，source of truth: json格式的数据。编辑器：极其克制的电子表格，并非另一个excel online。架构：纯静态网站，浏览器通过File System Access API获取本地文件夹权限后进行I/O。npm, ts.
 
 ## 数据
 
@@ -81,7 +81,7 @@ MyProject/
 
 ## 前端
 
-- 虚拟表格
+- 自研虚拟表格
 - 必须指定一个schema类型，比如`Skill`
 - 表头为`Skill`的`displayName` || `name`
 - 行头为行号，纯展示用，与数据无关
