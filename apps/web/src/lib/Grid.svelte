@@ -3,7 +3,7 @@
   // 铁律（AGENTS §7.2）：不为单元格建组件；不用 top/left 定位；滚动容器 + spacer。
   // 性能护栏（T6.7）：cell 样式创建时求值一次（flex 流布局）；每帧只写行 translateY 与
   // main 层 translateX（各 ~20 次/帧），滚动走合成器路径。
-  import { GridModel, visibleColumns } from '@gcb/grid';
+  import { GridModel, HistoryStack, parseTsv, mapPasteToRect, visibleColumns } from '@gcb/grid';
   import type { CellCoord, ColumnSpec, RowRange } from '@gcb/grid';
 
   interface RowData {
@@ -49,6 +49,21 @@
             editError = error;
             editValue = raw; // 拒绝提交：保持编辑态
             gridModel?.beginEdit(coord, raw); // 同步内核编辑态（editCoord 驱动浮层渲染）
+            return;
+          }
+          if (!inBatch) {
+            // 单格编辑入撤销栈；批量（粘贴/undo/redo）由外层整块入栈
+            const prev = rows[coord.row]?.cells[coord.col] ?? '';
+            history.pushWithoutExecute({
+              coalesceKey: `cell:${coord.row}:${coord.col}`,
+              apply: () => {
+                onCommit?.(coord, raw);
+              },
+              undo: () => {
+                onCommit?.(coord, prev);
+              },
+            });
+            syncHistoryState();
           }
         },
         onHistoryChange: () => {},
@@ -109,14 +124,28 @@
 
   function handleKeydown(event: KeyboardEvent): void {
     if (gridModel === undefined) return;
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'z' || event.key === 'Z')) {
+      event.preventDefault();
+      handleUndo();
+      syncHistoryState();
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'y' || event.key === 'Y')) {
+      event.preventDefault();
+      handleRedo();
+      syncHistoryState();
+      return;
+    }
     if (editValue !== null) {
       // 编辑态：Enter 提交下移 / Tab 提交右移 / Esc 取消（IME 由 input 原生处理）
       if (event.key === 'Enter') {
         event.preventDefault();
-        gridModel.commitEdit(editValue, 'down');
+        void commitIfEditing('down');
+        syncHistoryState();
       } else if (event.key === 'Tab') {
         event.preventDefault();
-        gridModel.commitEdit(editValue, 'right');
+        void commitIfEditing('right');
+        syncHistoryState();
       } else if (event.key === 'Escape') {
         event.preventDefault();
         gridModel.cancelEdit();
@@ -162,6 +191,98 @@
     editError = null;
   }
 
+  // T7.2 IME 保护：composition 期间（中文/日文输入法组字）Enter 是「确认组字」，
+  // 不得触发提交；compositionend 后才恢复提交路径。
+  let composing = false;
+
+  function handleCompositionStart(): void {
+    composing = true;
+  }
+
+  function handleCompositionEnd(event: CompositionEvent): void {
+    composing = false;
+    const input = event.target as HTMLInputElement;
+    editValue = input.value;
+  }
+
+  async function commitIfEditing(move: 'down' | 'right' | 'none'): Promise<void> {
+    if (gridModel === undefined || editValue === null) return;
+    if (composing) return; // IME 组字中：Enter 属于输入法，忽略
+    // 等待一帧让 compositionend 先落地（composition 最后一击 Enter 的时序）
+    if (editValue !== null) {
+      gridModel.commitEdit(editValue, move);
+    }
+  }
+
+  function handlePaste(event: ClipboardEvent): void {
+    if (gridModel === undefined) return;
+    const text = event.clipboardData?.getData('text/plain');
+    if (text === undefined || text === '') return;
+    event.preventDefault();
+    const sel = gridModel.getSelection();
+    const matrix = parseTsv(text);
+    const edits = mapPasteToRect(matrix, sel.cursor.row, sel.cursor.col, rowCount, columns.length);
+    if (edits.length === 0) return;
+    // 提交粘贴为一个历史命令（整块撤销）
+    const before = edits.map((e) => ({
+      row: e.row,
+      col: e.col,
+      raw: rows[e.row]?.cells[e.col] ?? '',
+    }));
+    history.push({
+      apply: () => {
+        commitCells(edits);
+      },
+      undo: () => {
+        commitCells(before);
+      },
+    });
+    syncHistoryState();
+  }
+
+  // 批量模式：commitAt 的逐格 onEditCommit 不再逐格入撤销栈
+  let inBatch = false;
+
+  function commitCells(edits: Array<{ row: number; col: number; raw: string }>): void {
+    inBatch = true;
+    try {
+      for (const e of edits) {
+        gridModel?.commitAt({ row: e.row, col: e.col }, e.raw);
+      }
+    } finally {
+      inBatch = false;
+    }
+  }
+
+  function handleUndo(): void {
+    inBatch = true;
+    try {
+      history.undo();
+    } finally {
+      inBatch = false;
+    }
+    syncHistoryState();
+  }
+
+  function handleRedo(): void {
+    inBatch = true;
+    try {
+      history.redo();
+    } finally {
+      inBatch = false;
+    }
+    syncHistoryState();
+  }
+
+  // T7.4：撤销栈（apply/undo 通过 commitCells 走上层提交协议）
+  const history = new HistoryStack();
+
+  const historyState = $state({ canUndo: false, canRedo: false });
+  function syncHistoryState(): void {
+    historyState.canUndo = history.canUndo();
+    historyState.canRedo = history.canRedo();
+  }
+
   const editCoord = $derived.by(() => {
     void editValue;
     if (gridModel === undefined) return null;
@@ -192,6 +313,7 @@
   tabindex="0"
   onscroll={handleScroll}
   onkeydown={handleKeydown}
+  onpaste={handlePaste}
   ondblclick={(e) => {
     const target = (e.target as HTMLElement).closest('[data-row]');
     if (target !== null) {
@@ -231,6 +353,8 @@
                     class:error={editError !== null}
                     value={editValue}
                     oninput={(e) => (editValue = e.currentTarget.value)}
+                    oncompositionstart={handleCompositionStart}
+                    oncompositionend={handleCompositionEnd}
                     onblur={() => {
                       if (editValue !== null) gridModel?.commitEdit(editValue, 'none');
                     }}
@@ -259,6 +383,8 @@
                   class:error={editError !== null}
                   value={editValue}
                   oninput={(e) => (editValue = e.currentTarget.value)}
+                  oncompositionstart={handleCompositionStart}
+                  oncompositionend={handleCompositionEnd}
                   onblur={() => {
                     if (editValue !== null) gridModel?.commitEdit(editValue, 'none');
                   }}

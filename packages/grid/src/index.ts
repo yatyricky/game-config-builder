@@ -23,3 +23,5 @@ export {
   rowY,
   scrollTopForRow,
 } from './layout.js';
+export { HistoryStack, parseTsv, mapPasteToRect, fillSequence } from './history.js';
+export type { HistoryCommand } from './history.js';

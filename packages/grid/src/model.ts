@@ -234,6 +234,13 @@ export class GridModel {
     if (move === 'down') this.setCursor(coord.row + 1, coord.col);
     if (move === 'right') this.setCursor(coord.row, coord.col + 1);
   }
+
+  /** 按坐标直接提交（粘贴/撤销重做的批量写原语；不经编辑状态机，不移动光标） */
+  commitAt(coord: CellCoord, raw: string): void {
+    if (coord.row < 0 || coord.row >= this.layout.rowCount) return;
+    if (coord.col < 0 || coord.col >= this.layout.columns.length) return;
+    this.events.onEditCommit(coord, raw);
+  }
 }
 
 function clampRow(row: number, rowCount: number): number {
