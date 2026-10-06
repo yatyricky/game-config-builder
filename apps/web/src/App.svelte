@@ -1,6 +1,7 @@
 <script lang="ts">
   // 极简 pathname 路由（不引依赖）：/ → 欢迎页，/playground → 网格开发场
   import Playground from './routes/Playground.svelte';
+  import Editor from './routes/Editor.svelte';
 
   let path = $state(window.location.pathname);
 
@@ -14,13 +15,16 @@
   }
 </script>
 
-{#if path === '/playground'}
+{#if path === '/edit'}
+  <Editor />
+{:else if path === '/playground'}
   <Playground />
 {:else}
   <main class="home">
     <h1>game-config-builder</h1>
     <p>内网自部署、强类型、关系感知的 web 游戏配置平台。</p>
     <ul>
+      <li><a href="/edit" onclick={(e) => { e.preventDefault(); navigate('/edit'); }}>编辑器（M8+）</a></li>
       <li><a href="/playground" onclick={(e) => { e.preventDefault(); navigate('/playground'); }}>网格 playground（M6 开发场）</a></li>
     </ul>
   </main>

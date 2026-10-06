@@ -11,11 +11,15 @@
     cells: string[];
   }
 
-  let { rows = [], columns = [], rowHeight = 28, onCommit }: {
+  let { rows = [], columns = [], rowHeight = 28, onCommit, cellClassName, onCellClick }: {
     rows?: RowData[];
     columns?: ColumnSpec[];
     rowHeight?: number;
     onCommit?: (coord: CellCoord, raw: string) => string | null;
+    /** 每格附加 class（校验红绿标记，M9） */
+    cellClassName?: (row: number, col: number) => string;
+    /** 单元格点击（FK chip 打开 peek，M10） */
+    onCellClick?: (row: number, col: number) => void;
   } = $props();
 
   let container: HTMLDivElement | undefined = $state();
@@ -86,6 +90,10 @@
     rebuildModel(count);
     void colCount;
     handleScroll(); // 首帧同步容器尺寸（onscroll 只在滚动时触发）
+    // 视口尺寸随布局变化（首帧布局未定时 clientWidth=0、侧栏开合、窗口缩放）
+    const ro = new ResizeObserver(() => handleScroll());
+    if (container !== undefined) ro.observe(container);
+    return () => ro.disconnect();
   });
 
   // 列 x 坐标前缀和（查表 O(1)）
@@ -339,13 +347,16 @@
             {#each colGroups.frozen as col (col)}
               <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
               <div
-                class="cell"
+                class="cell {cellClassName?.(rowIdx, col) ?? ''}"
+                class:cursor={rowIdx === cursorPos.row && col === cursorPos.col}
                 role="gridcell"
                 tabindex="-1"
-                class:cursor={rowIdx === cursorPos.row && col === cursorPos.col}
                 data-col={col}
                 style={cellStyle(col)}
-                onclick={() => gridModel?.setCursor(rowIdx, col)}
+                onclick={() => {
+                  gridModel?.setCursor(rowIdx, col);
+                  onCellClick?.(rowIdx, col);
+                }}
               >
                 {#if editValue !== null && editCoord !== null && editCoord.row === rowIdx && editCoord.col === col}
                   <input
@@ -369,13 +380,16 @@
           {#each colGroups.windowed as col (col)}
             <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
             <div
-              class="cell"
+              class="cell {cellClassName?.(rowIdx, col) ?? ''}"
+              class:cursor={rowIdx === cursorPos.row && col === cursorPos.col}
               role="gridcell"
               tabindex="-1"
-              class:cursor={rowIdx === cursorPos.row && col === cursorPos.col}
               data-col={col}
               style={cellStyle(col)}
-              onclick={() => gridModel?.setCursor(rowIdx, col)}
+              onclick={() => {
+                  gridModel?.setCursor(rowIdx, col);
+                  onCellClick?.(rowIdx, col);
+                }}
             >
               {#if editValue !== null && editCoord !== null && editCoord.row === rowIdx && editCoord.col === col}
                 <input

@@ -57,6 +57,12 @@ importers:
       '@gcb/grid':
         specifier: workspace:*
         version: link:../../packages/grid
+      '@gcb/schema':
+        specifier: workspace:*
+        version: link:../../packages/schema
+      '@gcb/validate':
+        specifier: workspace:*
+        version: link:../../packages/validate
     devDependencies:
       '@playwright/test':
         specifier: ^1.63.0
