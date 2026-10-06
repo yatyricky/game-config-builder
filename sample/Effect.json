@@ -1,0 +1,3 @@
+{"ID": "001", "Name": "Damage", "FuncName": "EffectDamage"}
+{"ID": "002", "Name": "Heal", "FuncName": "EffectHeal"}
+{"ID": "003", "Name": "Stun", "FuncName": "EffectStun"}

@@ -1,0 +1,11 @@
+{
+    "meta": {
+        "type": "struct",
+        "name": "Effect"
+    },
+    "fields": [
+        { "name": "ID", "type": "string", "pk": true },
+        { "name": "Name", "type": "string" },
+        { "name": "FuncName", "type": "string" }
+    ]
+}

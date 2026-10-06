@@ -1,0 +1,13 @@
+{
+    "meta": {
+        "type": "enum",
+        "name": "School",
+        "flags": true
+    },
+    "enums": [
+        { "name": "Fire", "value": 1 },
+        { "name": "Earth", "value": 2 },
+        { "name": "Air", "value": 4 },
+        { "name": "Water", "value": 8 }
+    ]
+}

@@ -1,0 +1,13 @@
+{
+    "meta": {
+        "type": "struct",
+        "name": "Skill"
+    },
+    "fields": [
+        { "name": "ID", "type": "string", "pk": true },
+        { "name": "Name", "type": "string" },
+        { "name": "School", "type": "School" },
+        { "name": "Effects", "map": true, "keyType": "Effect", "valueType": "number" },
+        { "name": "LevelRequirements", "displayName": "LvlReq", "array": true, "elementType": "number" }
+    ]
+}

@@ -1,0 +1,2 @@
+{"ID": "0001", "Name": "Strike", "School": 6, "Effects": {"001": 20}, "LevelRequirements": [1, 3, 6]}
+{"ID": "0002", "Name": "Meditation", "School": 8, "Effects": {"002": 30, "003": 2}, "LevelRequirements": [1, 4, 15]}
