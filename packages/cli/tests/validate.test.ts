@@ -1,4 +1,5 @@
 import { cpSync, readFileSync, rmSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -38,7 +39,7 @@ it('broken：实际错误与 expected.json 逐条双向比对（T2.5 验收）',
 });
 
 it('--fix：修复 pk.order 后复查告警清零（T2.4 验收）', () => {
-  const temp = join(tmpdir(), `gcb-fix-test-${Date.now()}`);
+  const temp = join(tmpdir(), `gcb-fix-test-${randomUUID()}`);
   cpSync(BROKEN, temp, { recursive: true });
   try {
     const before = runValidate(temp, true);

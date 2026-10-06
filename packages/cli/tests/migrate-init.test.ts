@@ -1,4 +1,5 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -8,7 +9,7 @@ import { runCheckSchema, runExportCli, runInit, runMigrateCli, runValidate } fro
 const DEMO = fileURLToPath(new URL('../../../examples/demo', import.meta.url));
 
 it('T5.4：init 后 check-schema / validate / export 三连通过（验收）', () => {
-  const dir = join(tmpdir(), `gcb-init-${Date.now()}`);
+  const dir = join(tmpdir(), `gcb-init-${randomUUID()}`);
   try {
     const init = runInit(dir);
     expect(init.exitCode).toBe(0);
@@ -24,7 +25,7 @@ it('T5.4：init 后 check-schema / validate / export 三连通过（验收）', 
 });
 
 it('T5.3：rename-field 迁移——数据键重写 + 状态记录 + 幂等（验收）', () => {
-  const project = join(tmpdir(), `gcb-mig-${Date.now()}`);
+  const project = join(tmpdir(), `gcb-mig-${randomUUID()}`);
   cpSync(DEMO, project, { recursive: true });
   try {
     // §10 顺序：先加迁移 → 改 schema → migrate
@@ -58,7 +59,7 @@ it('T5.3：rename-field 迁移——数据键重写 + 状态记录 + 幂等（�
 });
 
 it('T5.3：retype-field 失败行全列后中止，零写入（验收）', () => {
-  const project = join(tmpdir(), `gcb-mig2-${Date.now()}`);
+  const project = join(tmpdir(), `gcb-mig2-${randomUUID()}`);
   cpSync(DEMO, project, { recursive: true });
   try {
     mkdirSync(join(project, 'migrations'), { recursive: true });

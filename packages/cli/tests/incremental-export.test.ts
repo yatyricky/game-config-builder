@@ -1,4 +1,5 @@
 import { cpSync, existsSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -8,7 +9,7 @@ import { runExportCli } from '../src/main.js';
 const DEMO = fileURLToPath(new URL('../../../examples/demo', import.meta.url));
 
 it('T5.1：增量导出——首次全量；无变更重导 written=0（mtime 保留）', () => {
-  const out = join(tmpdir(), `gcb-incr-${Date.now()}`);
+  const out = join(tmpdir(), `gcb-incr-${randomUUID()}`);
   try {
     const first = runExportCli(DEMO, ['json'], out, true);
     expect(first.exitCode).toBe(0);
@@ -26,8 +27,8 @@ it('T5.1：增量导出——首次全量；无变更重导 written=0（mtime �
 });
 
 it('T5.1：改一表一行 → 仅该表文件重写（其余 mtime 不变）', () => {
-  const project = join(tmpdir(), `gcb-incr-proj-${Date.now()}`);
-  const out = join(tmpdir(), `gcb-incr-out-${Date.now()}`);
+  const project = join(tmpdir(), `gcb-incr-proj-${randomUUID()}`);
+  const out = join(tmpdir(), `gcb-incr-out-${randomUUID()}`);
   cpSync(DEMO, project, { recursive: true });
   try {
     expect(runExportCli(project, ['json'], out, true).exitCode).toBe(0);

@@ -1,4 +1,5 @@
 import { cpSync, readFileSync, rmSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -10,7 +11,7 @@ let project = '';
 let app: Awaited<ReturnType<typeof buildApp>>['app'];
 
 beforeAll(async () => {
-  project = join(tmpdir(), `gcb-server-${Date.now()}`);
+  project = join(tmpdir(), `gcb-server-${randomUUID()}`);
   cpSync(DEMO, project, { recursive: true });
   const built = await buildApp({ projectDir: project });
   app = built.app;

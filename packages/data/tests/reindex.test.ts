@@ -1,52 +1,71 @@
-import { existsSync, rmSync } from 'node:fs';
+// 注意：不得直接读写共享的 examples/demo（并发测试会 cpSync 它）——全部操作临时副本。
+import { cpSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { expect, it } from 'vitest';
 import { loadSchemaDir } from '@gcb/schema/node';
 import { openIndex, queryBackrefs, reindex, schemaHash } from '../src/index.js';
 
 const DEMO = fileURLToPath(new URL('../../../examples/demo', import.meta.url));
-const DB = join(DEMO, 'gcb.db');
+
+// 每个用例独立副本（gcb.db 一并复制也无妨——reindex 会先删重建）
+function makeProjectCopy(): string {
+  const project = join(tmpdir(), `gcb-reindex-${randomUUID()}`);
+  cpSync(DEMO, project, { recursive: true });
+  return project;
+}
 
 it('reindex：fk_edges 行数 = demo 全库 ref 出边数；幂等重建（T3.6 验收）', () => {
-  const ir = loadSchemaDir(join(DEMO, 'schema')).ir;
-  const result1 = reindex(ir, DEMO);
-  // ref 边：Item.craftFrom ×3 + Item1002.rewards.itemId ×1 + Hero4001.equipment ×2
-  //        + Hero4001.skillIds ×2 + Hero4002.skillIds ×1 = 9
-  expect(result1.rows).toBe(12);
-  expect(result1.edges).toBe(9);
-  expect(result1.tables).toBe(5);
+  const project = makeProjectCopy();
+  try {
+    const ir = loadSchemaDir(join(project, 'schema')).ir;
+    const result1 = reindex(ir, project);
+    // ref 边：Item.craftFrom ×3 + Item1002.rewards.itemId ×1 + Hero4001.equipment ×2
+    //        + Hero4001.skillIds ×2 + Hero4002.skillIds ×1 = 9
+    expect(result1.rows).toBe(12);
+    expect(result1.edges).toBe(9);
+    expect(result1.tables).toBe(5);
 
-  const second = reindex(ir, DEMO);
-  expect(second).toEqual(result1);
-  expect(existsSync(DB)).toBe(true);
+    const second = reindex(ir, project);
+    expect(second).toEqual(result1);
+    expect(existsSync(join(project, 'gcb.db'))).toBe(true);
+  } finally {
+    rmSync(project, { recursive: true, force: true });
+  }
 });
 
 it('queryBackrefs：道具与技能的反向引用清单', () => {
-  const ir = loadSchemaDir(join(DEMO, 'schema')).ir;
-  reindex(ir, DEMO);
-  const db = openIndex(DB);
+  const project = makeProjectCopy();
   try {
-    expect(queryBackrefs(db, 'Item', '1001')).toEqual([
-      { fromTable: 'Hero', fromPk: '4001', fromField: 'equipment.1' },
-      { fromTable: 'Item', fromPk: '1002', fromField: 'rewards.0.itemId' },
-    ]);
-    const heroBackrefs = queryBackrefs(db, 'Skill', '3002');
-    expect(heroBackrefs.map((b) => `${b.fromTable}#${b.fromPk}`)).toEqual([
-      'Hero#4001',
-      'Hero#4002',
-    ]);
+    const ir = loadSchemaDir(join(project, 'schema')).ir;
+    reindex(ir, project);
+    const db = openIndex(join(project, 'gcb.db'));
+    try {
+      expect(queryBackrefs(db, 'Item', '1001')).toEqual([
+        { fromTable: 'Hero', fromPk: '4001', fromField: 'equipment.1' },
+        { fromTable: 'Item', fromPk: '1002', fromField: 'rewards.0.itemId' },
+      ]);
+      const heroBackrefs = queryBackrefs(db, 'Skill', '3002');
+      expect(heroBackrefs.map((b) => `${b.fromTable}#${b.fromPk}`)).toEqual([
+        'Hero#4001',
+        'Hero#4002',
+      ]);
+    } finally {
+      db.close();
+    }
   } finally {
-    db.close();
+    rmSync(project, { recursive: true, force: true });
   }
 });
 
 it('schemaHash 稳定', () => {
-  const ir = loadSchemaDir(join(DEMO, 'schema')).ir;
-  expect(schemaHash(ir)).toBe(schemaHash(loadSchemaDir(join(DEMO, 'schema')).ir));
-});
-
-it('清理：测试不留 gcb.db', () => {
-  if (existsSync(DB)) rmSync(DB);
-  expect(existsSync(DB)).toBe(false);
+  const project = makeProjectCopy();
+  try {
+    const ir = loadSchemaDir(join(project, 'schema')).ir;
+    expect(schemaHash(ir)).toBe(schemaHash(loadSchemaDir(join(project, 'schema')).ir));
+  } finally {
+    rmSync(project, { recursive: true, force: true });
+  }
 });

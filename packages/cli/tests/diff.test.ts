@@ -1,4 +1,5 @@
 import { cpSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -8,9 +9,9 @@ import { runDiff, runExportCli } from '../src/main.js';
 const DEMO = fileURLToPath(new URL('../../../examples/demo', import.meta.url));
 
 it('T5.2：A/B 两份导出的行级/字段级 diff 报告（golden 锁定）', () => {
-  const dirA = join(tmpdir(), `gcb-diff-a-${Date.now()}`);
-  const dirB = join(tmpdir(), `gcb-diff-b-${Date.now()}`);
-  const project = join(tmpdir(), `gcb-diff-proj-${Date.now()}`);
+  const dirA = join(tmpdir(), `gcb-diff-a-${randomUUID()}`);
+  const dirB = join(tmpdir(), `gcb-diff-b-${randomUUID()}`);
+  const project = join(tmpdir(), `gcb-diff-proj-${randomUUID()}`);
   cpSync(DEMO, project, { recursive: true });
   try {
     expect(runExportCli(project, ['json'], dirA).exitCode).toBe(0);
@@ -56,7 +57,7 @@ it('T5.2：A/B 两份导出的行级/字段级 diff 报告（golden 锁定）', 
 });
 
 it('T5.2：无变更 → 报告「无变更」', () => {
-  const dirA = join(tmpdir(), `gcb-diff-same-${Date.now()}`);
+  const dirA = join(tmpdir(), `gcb-diff-same-${randomUUID()}`);
   try {
     expect(runExportCli(DEMO, ['json'], dirA).exitCode).toBe(0);
     const run = runDiff(dirA, dirA);
