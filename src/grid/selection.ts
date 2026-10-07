@@ -5,7 +5,7 @@ export interface Focus {
 
 /**
  * 选中区：显式矩阵范围（工作区坐标，闭区间）+ 焦点。
- * 范围在拖拽中随 focus 延伸（见 extendTo），拖拽结束后固定不变——
+ * 范围在拖拽中按矩形(锚点,当前格)实时重算（见 rectBetween），拖拽结束后固定不变——
  * 因此环流回绕到任何格子（含左上角）都不会使矩阵塌缩。
  */
 export interface Selection {
@@ -23,13 +23,13 @@ export function singleAt(f: Focus): Selection {
   return { rowStart: f.row, rowEnd: f.row, colStart: f.col, colEnd: f.col, focus: f }
 }
 
-/** 拖拽延伸：范围并入 (f)，焦点移到 f（可向任意方向扩展） */
-export function extendTo(s: Selection, f: Focus): Selection {
+/** 拖拽选区：矩形(锚点=mousedown 格, 当前格)，随光标实时重算——路径不留痕（用户 2026-10-08 裁定），焦点随当前格 */
+export function rectBetween(anchor: Focus, f: Focus): Selection {
   return {
-    rowStart: Math.min(s.rowStart, f.row),
-    rowEnd: Math.max(s.rowEnd, f.row),
-    colStart: Math.min(s.colStart, f.col),
-    colEnd: Math.max(s.colEnd, f.col),
+    rowStart: Math.min(anchor.row, f.row),
+    rowEnd: Math.max(anchor.row, f.row),
+    colStart: Math.min(anchor.col, f.col),
+    colEnd: Math.max(anchor.col, f.col),
     focus: f,
   }
 }

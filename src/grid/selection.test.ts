@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { DEFAULT_SELECTION, extendTo, focusToMatrixOrigin, isMatrix, isInSelection, navigate, navKeyOf, singleAt } from './selection.ts'
+import { DEFAULT_SELECTION, focusToMatrixOrigin, isMatrix, isInSelection, navigate, navKeyOf, rectBetween, singleAt } from './selection.ts'
 import type { Focus, Selection } from './selection.ts'
 
 const RC = 12
@@ -28,14 +28,21 @@ test('isMatrix / isInSelection', () => {
   assert.equal(isInSelection(mat(2, 3), 1, 1), false)
 })
 
-test('extendTo：向右下/左上双向延伸，焦点随动', () => {
-  const start = single(2, 2)
-  assert.deepEqual(extendTo(start, { row: 4, col: 4 }), {
+test('rectBetween：矩形(锚点,当前格)，路径不留痕', () => {
+  assert.deepEqual(rectBetween({ row: 2, col: 2 }, { row: 4, col: 4 }), {
     rowStart: 2, rowEnd: 4, colStart: 2, colEnd: 4, focus: { row: 4, col: 4 },
   })
-  // 反方向（右下→左上）：range 一致
-  const big = extendTo(extendTo(start, { row: 4, col: 4 }), { row: 1, col: 2 })
-  assert.deepEqual(big, { rowStart: 1, rowEnd: 4, colStart: 2, colEnd: 4, focus: { row: 1, col: 2 } })
+  // 反方向（右下→左上）：bounds 一致
+  assert.deepEqual(rectBetween({ row: 4, col: 4 }, { row: 1, col: 2 }), {
+    rowStart: 1, rowEnd: 4, colStart: 2, colEnd: 4, focus: { row: 1, col: 2 },
+  })
+  // bug 回归：从 (1,1) 经过 (1,3) 回到 (2,2)，最终选区 = 矩形((1,1),(2,2))，不含第 3 列
+  assert.deepEqual(rectBetween({ row: 1, col: 1 }, { row: 1, col: 3 }), {
+    rowStart: 1, rowEnd: 1, colStart: 1, colEnd: 3, focus: { row: 1, col: 3 },
+  })
+  assert.deepEqual(rectBetween({ row: 1, col: 1 }, { row: 2, col: 2 }), {
+    rowStart: 1, rowEnd: 2, colStart: 1, colEnd: 2, focus: { row: 2, col: 2 },
+  })
 })
 
 // ---- M3 单选语义回归 ----
@@ -195,7 +202,7 @@ test('多选：入参不被修改', () => {
   const before = JSON.stringify(s)
   navigate(s, 'Enter', RC, CC)
   navigate(s, 'ArrowDown', RC, CC)
-  extendTo(s, { row: 0, col: 0 })
+  rectBetween({ row: 0, col: 0 }, { row: 0, col: 0 })
   assert.equal(JSON.stringify(s), before)
 })
 

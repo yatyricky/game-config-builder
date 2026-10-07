@@ -4,7 +4,7 @@ import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent
 import type { StructDef, Table } from '../data/types.ts'
 import { COL_WIDTH, ROW_HEADER_WIDTH, ROW_HEIGHT, canvasHeight, layoutColumns, totalWidth, visibleRows } from './layout.ts'
 import { formatCell } from './format.ts'
-import { DEFAULT_SELECTION, extendTo, focusToMatrixOrigin, isInSelection, navKeyOf, navigate, singleAt } from './selection.ts'
+import { DEFAULT_SELECTION, focusToMatrixOrigin, isInSelection, navKeyOf, navigate, rectBetween, singleAt } from './selection.ts'
 import type { Focus, Selection } from './selection.ts'
 import { buildClipboard, planPaste } from '../data/clipboard.ts'
 import type { ClipboardContent, PasteWrite, SelectionBounds } from '../data/clipboard.ts'
@@ -229,7 +229,7 @@ export function Grid({ table, def, onEditCell, onApplyWrites, onPasteError }: Gr
   }
   const extendCell = (row: number, col: number) => (): void => {
     if (drag?.mode !== 'cell') return
-    setSelection(s => extendTo(s, { row, col }))
+    setSelection(rectBetween(drag.start, { row, col }))
   }
   const startColDrag = (col: number) => (e: ReactMouseEvent<HTMLDivElement>): void => {
     e.preventDefault()
@@ -240,7 +240,7 @@ export function Grid({ table, def, onEditCell, onApplyWrites, onPasteError }: Gr
   }
   const extendCol = (col: number) => (): void => {
     if (drag?.mode !== 'col') return
-    setSelection(s => extendTo(s, { row: rowCount - 1, col }))
+    setSelection(rectBetween({ row: 0, col: drag.start.col }, { row: rowCount - 1, col }))
   }
   const startRowDrag = (row: number) => (e: ReactMouseEvent<HTMLDivElement>): void => {
     e.preventDefault()
@@ -251,7 +251,7 @@ export function Grid({ table, def, onEditCell, onApplyWrites, onPasteError }: Gr
   }
   const extendRow = (row: number) => (): void => {
     if (drag?.mode !== 'row') return
-    setSelection(s => extendTo(s, { row, col: colCount - 1 }))
+    setSelection(rectBetween({ row: drag.start.row, col: 0 }, { row, col: colCount - 1 }))
   }
 
   const rows = []
