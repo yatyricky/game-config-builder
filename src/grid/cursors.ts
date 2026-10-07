@@ -13,8 +13,8 @@ const OLIVE_EDGE = '#96ab73'
 
 /** 图形定义的基准空间（多边形坐标以此为准），渲染时整体缩放到目标尺寸 */
 const BASE = 28
-/** 目标 CSS 尺寸：28 缩小 20% */
-const CSS_SIZE = 22
+/** 目标 CSS 尺寸：28 缩 20% 后再缩 10% */
+const CSS_SIZE = 20
 /** 超采样倍率：先高分辨率绘制再降采样，斜边更干净 */
 const SUPERSAMPLE = 2
 
