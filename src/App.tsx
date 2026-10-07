@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { loadProject } from './data/loader.ts'
 import type { LoadResult } from './data/loader.ts'
 import { fsaSource } from './data/dirSource.ts'
+import { applyCellEdit } from './data/edit.ts'
 import { Grid } from './grid/Grid.tsx'
 import type { StructDef, Table } from './data/types.ts'
 import './app.css'
@@ -16,6 +17,37 @@ export function App() {
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
   const [stress, setStress] = useState(false)
+  const [stressTable, setStressTable] = useState<{ table: Table; def: StructDef } | null>(null)
+
+  const toggleStress = (): void => {
+    setStress(s => {
+      const next = !s
+      setStressTable(next ? makeStressTable() : null)
+      return next
+    })
+  }
+
+  /** M5：编辑提交写内存（写时复制 + 稀疏补齐）；写盘与保存侧校验属 M7 */
+  const handleEditCell = (tableName: string, row: number, fieldName: string, value: string): void => {
+    if (stress && tableName === 'Stress') {
+      setStressTable(prev =>
+        prev ? { ...prev, table: { ...prev.table, rows: applyCellEdit(prev.table.rows, row, fieldName, value) } } : prev,
+      )
+      return
+    }
+    setResult(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        project: {
+          ...prev.project,
+          tables: prev.project.tables.map(t =>
+            t.name === tableName ? { ...t, rows: applyCellEdit(t.rows, row, fieldName, value) } : t,
+          ),
+        },
+      }
+    })
+  }
 
   const open = async (): Promise<void> => {
     const picker = (window as unknown as PickerWindow).showDirectoryPicker
@@ -37,14 +69,13 @@ export function App() {
   const table = result?.project.tables.find(t => t.name === selected)
   const def = result?.project.types.get(selected ?? '')
   const structDef = def?.kind === 'struct' ? def : null
-  const stressTable = useMemo(() => (stress ? makeStressTable() : null), [stress])
 
   return (
     <main id="app">
       {/* M1/M2 临时调试壳：M7 菜单落地后替换 */}
       <div className="toolbar">
         <button onClick={open}>打开工程</button>
-        <button onClick={() => setStress(s => !s)}>{stress ? '退出压测' : '压测表(10万行)'}</button>
+        <button onClick={toggleStress}>{stress ? '退出压测' : '压测表(10万行)'}</button>
         {result && !stress && (
           <select value={selected ?? ''} onChange={e => setSelected(e.target.value)}>
             {result.project.tables.map(t => (
@@ -58,14 +89,23 @@ export function App() {
       {error && <p className="error">{error}</p>}
       {stress && stressTable ? (
         <div className="grid-area">
-          <Grid table={stressTable.table} def={stressTable.def} />
+          <Grid
+            table={stressTable.table}
+            def={stressTable.def}
+            onEditCell={(row, fieldName, value) => handleEditCell('Stress', row, fieldName, value)}
+          />
         </div>
       ) : result ? (
         <>
           {result.issues.length > 0 && <pre className="issues">{summarize(result)}</pre>}
           {table && structDef ? (
             <div className="grid-area">
-              <Grid key={table.name} table={table} def={structDef} />
+              <Grid
+                key={table.name}
+                table={table}
+                def={structDef}
+                onEditCell={(row, fieldName, value) => handleEditCell(table.name, row, fieldName, value)}
+              />
             </div>
           ) : (
             <p>{selected ? `表格 ${selected} 缺少对应的 struct 类型` : '工程中没有表格'}</p>

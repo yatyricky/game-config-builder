@@ -26,6 +26,8 @@ export interface FieldDef {
   type: string
   pk?: boolean
   displayName?: string
+  /** spec（2026-10-08 增补）：可带 default 属性；无 default 即必填（required） */
+  default?: unknown
   map?: boolean
   keyType?: string
   valueType?: string

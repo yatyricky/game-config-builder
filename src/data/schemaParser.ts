@@ -128,6 +128,7 @@ function toField(fj: Record<string, unknown>): FieldDef {
   }
   if (fj['pk'] === true) f.pk = true
   if (typeof fj['displayName'] === 'string') f.displayName = fj['displayName']
+  if ('default' in fj) f.default = fj['default']
   if (fj['map'] === true) f.map = true
   if (typeof fj['keyType'] === 'string') f.keyType = fj['keyType']
   if (typeof fj['valueType'] === 'string') f.valueType = fj['valueType']

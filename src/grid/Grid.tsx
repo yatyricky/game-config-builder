@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
 import type { StructDef, Table } from '../data/types.ts'
 import { COL_WIDTH, ROW_HEADER_WIDTH, ROW_HEIGHT, canvasHeight, layoutColumns, totalWidth, visibleRows } from './layout.ts'
@@ -11,6 +12,8 @@ import './grid.css'
 interface GridProps {
   table: Table
   def: StructDef
+  /** 编辑提交（M5 写内存；写盘属 M7） */
+  onEditCell?: (row: number, fieldName: string, value: string) => void
 }
 
 interface DragState {
@@ -18,17 +21,25 @@ interface DragState {
   start: Focus
 }
 
+interface EditingCell {
+  row: number
+  col: number
+  value: string
+}
+
 /**
- * 网格（M2 渲染 + M3 单选 + M4 多选）。
+ * 网格（M2 渲染 + M3 单选 + M4 多选 + M5 编辑态）。
  * 结构：viewport（滚动容器，tabIndex 接键盘）> header（sticky top）+ canvas（相对定位）> row（absolute top）> cell。
- * 行头靠 position:sticky left 定位；选择模型见 selection.ts（显式范围 + 焦点，纯函数）。
+ * 编辑态（仅 string 字段）：双击 / F2 / 导航态直接键入（含 IME）进入；Enter/Tab 系提交后执行导航态行为；Esc 取消。
  */
-export function Grid({ table, def }: GridProps) {
+export function Grid({ table, def, onEditCell }: GridProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const [scrollTop, setScrollTop] = useState(0)
   const [viewportH, setViewportH] = useState(0)
   const [selection, setSelection] = useState<Selection>(DEFAULT_SELECTION)
   const [drag, setDrag] = useState<DragState | null>(null)
+  const [editing, setEditing] = useState<EditingCell | null>(null)
 
   useEffect(() => {
     applyGridCursors(document.documentElement)
@@ -77,7 +88,53 @@ export function Grid({ table, def }: GridProps) {
   const width = totalWidth(def.fields.length)
   const { start, end } = visibleRows(scrollTop, viewportH, rowCount)
 
+  const isStringField = (col: number): boolean => {
+    const f = def.fields[col]
+    return f.type === 'string' && !f.map && !f.array
+  }
+
+  const cellString = (row: number, col: number): string => {
+    const v = table.rows[row]?.[def.fields[col].name]
+    return typeof v === 'string' ? v : ''
+  }
+
+  /** 进入编辑态（仅 string 字段；spec：其他类型 NotImplemented） */
+  const enterEdit = (row: number, col: number): void => {
+    if (!isStringField(col)) return
+    setEditing({ row, col, value: cellString(row, col) })
+  }
+
+  /** 提交当前编辑。返回是否成功（M5 阶段 string 恒合法；非法拦截钩子留待后续扩展） */
+  const commitEdit = (): boolean => {
+    if (!editing) return true
+    onEditCell?.(editing.row, def.fields[editing.col].name, editing.value)
+    setEditing(null)
+    return true
+  }
+
+  const focusViewport = (): void => {
+    viewportRef.current?.focus()
+  }
+
+  // ---- 键盘：导航态（viewport 级） ----
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>): void => {
+    if (editing) return // 编辑态按键由输入框处理
+    if (e.key === 'F2') {
+      e.preventDefault()
+      enterEdit(selection.focus.row, selection.focus.col)
+      return
+    }
+    // spec：导航态 string 焦点可直接键入（含 IME）进入编辑态且不消费本次键盘事件——
+    // 同步挂载输入框并聚焦，让默认文本插入 / IME 组合落在输入框上
+    const printable = e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey
+    const ime = e.key === 'Process' || e.nativeEvent.isComposing || e.keyCode === 229
+    if ((printable || ime) && isStringField(selection.focus.col)) {
+      flushSync(() => {
+        setEditing({ row: selection.focus.row, col: selection.focus.col, value: '' })
+      })
+      inputRef.current?.focus()
+      return
+    }
     const key = navKeyOf(e.key, e.shiftKey)
     if (!key) return
     // 导航键一律阻断原生行为：方向键的滚动、Tab 的焦点跳转
@@ -85,10 +142,47 @@ export function Grid({ table, def }: GridProps) {
     setSelection(s => navigate(s, key, rowCount, colCount))
   }
 
-  const focusViewport = (): void => viewportRef.current?.focus()
+  // ---- 键盘：编辑态（输入框级） ----
+  const onInputKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>): void => {
+    if (e.key === 'Escape') {
+      // 取消编辑，恢复原值回导航态
+      e.preventDefault()
+      setEditing(null)
+      focusViewport()
+      return
+    }
+    const key = navKeyOf(e.key, e.shiftKey)
+    if (key === 'Enter' || key === 'ShiftEnter' || key === 'Tab' || key === 'ShiftTab') {
+      // 提交内容，切换导航态，然后执行该按键导航态的行为
+      e.preventDefault()
+      commitEdit()
+      setSelection(s => navigate(s, key, rowCount, colCount))
+      focusViewport()
+      return
+    }
+    // 编辑态方向键只操作编辑控件：上下键移动 caret 到文本首/尾；左右键走默认
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      inputRef.current?.setSelectionRange(0, 0)
+      return
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      const len = inputRef.current?.value.length ?? 0
+      inputRef.current?.setSelectionRange(len, len)
+      return
+    }
+  }
+
+  // ---- 鼠标：编辑中点击任何选择目标，先提交再选中（非法时忽略点击，M5 阶段恒合法） ----
+  const beginDrag = (): boolean => {
+    if (editing && !commitEdit()) return false
+    return true
+  }
 
   const startCellDrag = (row: number, col: number) => (e: ReactMouseEvent<HTMLDivElement>): void => {
     e.preventDefault()
+    if (!beginDrag()) return
     setSelection(singleAt({ row, col }))
     setDrag({ mode: 'cell', start: { row, col } })
     focusViewport()
@@ -99,6 +193,7 @@ export function Grid({ table, def }: GridProps) {
   }
   const startColDrag = (col: number) => (e: ReactMouseEvent<HTMLDivElement>): void => {
     e.preventDefault()
+    if (!beginDrag()) return
     setSelection({ rowStart: 0, rowEnd: rowCount - 1, colStart: col, colEnd: col, focus: { row: rowCount - 1, col } })
     setDrag({ mode: 'col', start: { row: 0, col } })
     focusViewport()
@@ -109,6 +204,7 @@ export function Grid({ table, def }: GridProps) {
   }
   const startRowDrag = (row: number) => (e: ReactMouseEvent<HTMLDivElement>): void => {
     e.preventDefault()
+    if (!beginDrag()) return
     setSelection({ rowStart: row, rowEnd: row, colStart: 0, colEnd: colCount - 1, focus: { row, col: colCount - 1 } })
     setDrag({ mode: 'row', start: { row, col: 0 } })
     focusViewport()
@@ -126,6 +222,7 @@ export function Grid({ table, def }: GridProps) {
       const title = view.kind === 'text' ? view.text : undefined
       const inSel = isInSelection(selection, i, cIdx)
       const isFocus = i === selection.focus.row && cIdx === selection.focus.col
+      const isEditingThis = editing !== null && editing.row === i && editing.col === cIdx
       return (
         <div
           key={c.field.name}
@@ -134,8 +231,25 @@ export function Grid({ table, def }: GridProps) {
           title={title}
           onMouseDown={startCellDrag(i, cIdx)}
           onMouseEnter={extendCell(i, cIdx)}
+          onDoubleClick={() => enterEdit(i, cIdx)}
         >
-          {view.kind === 'text' ? view.text : view.kind === 'notimpl' ? 'NotImplemented' : ''}
+          {isEditingThis && editing ? (
+            <input
+              ref={inputRef}
+              className="cell-input"
+              value={editing.value}
+              autoFocus
+              onChange={e => setEditing(prev => (prev ? { ...prev, value: e.target.value } : prev))}
+              onKeyDown={onInputKeyDown}
+              onMouseDown={e => e.stopPropagation()}
+            />
+          ) : view.kind === 'text' ? (
+            view.text
+          ) : view.kind === 'notimpl' ? (
+            'NotImplemented'
+          ) : (
+            ''
+          )}
         </div>
       )
     })
