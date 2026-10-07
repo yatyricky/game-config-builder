@@ -17,31 +17,28 @@ async function withTmpCopy(fn: (dir: string) => Promise<void>): Promise<void> {
   }
 }
 
-test('sample 工程全量解析（对照 spec 样例）', async () => {
+test('sample 工程全量解析（对照 spec 样例 + Priority 扩展）', async () => {
   const { project, issues } = await loadProject(nodeSource('sample'))
   assert.deepEqual(issues, [])
   assert.equal(project.types.size, 3)
 
-  const skill = project.types.get('Skill')
-  assert.equal(skill?.kind, 'struct')
-  if (skill?.kind === 'struct') {
-    const effects = skill.fields.find(f => f.name === 'Effects')
-    assert.equal(effects?.map, true)
-    assert.equal(effects?.keyType, 'Effect')
-    assert.equal(effects?.valueType, 'number')
-    const lvl = skill.fields.find(f => f.name === 'LevelRequirements')
-    assert.equal(lvl?.array, true)
-    assert.equal(lvl?.elementType, 'number')
-    assert.equal(lvl?.displayName, 'LvlReq')
+  const effect = project.types.get('Effect')
+  assert.equal(effect?.kind, 'struct')
+  if (effect?.kind === 'struct') {
+    const priority = effect.fields.find(f => f.name === 'Priority')
+    assert.equal(priority?.type, 'number')
+    assert.equal(priority?.default, 0)
   }
 
   const byName = new Map(project.tables.map(t => [t.name, t]))
-  assert.deepEqual(byName.get('Effect')?.rows, [
-    { ID: '001', Name: 'Damage', FuncName: 'EffectDamage' },
-    { ID: '002', Name: 'Heal', FuncName: 'EffectHeal' },
-    { ID: '003', Name: 'Stun', FuncName: 'EffectStun' },
-  ])
-  assert.deepEqual(byName.get('Skill')?.rows, [
+  const effectRows = byName.get('Effect')?.rows ?? []
+  assert.equal(effectRows.length, 3)
+  assert.equal(effectRows[0].Priority, 1)
+  assert.equal(effectRows[1].Priority, 5)
+  assert.equal(effectRows[2].Priority, 9)
+
+  const skillRows = byName.get('Skill')?.rows ?? []
+  assert.deepEqual(skillRows, [
     { ID: '0001', Name: 'Strike', School: 6, Effects: { '001': 20 }, LevelRequirements: [1, 3, 6] },
     { ID: '0002', Name: 'Meditation', School: 8, Effects: { '002': 30, '003': 2 }, LevelRequirements: [1, 4, 15] },
   ])

@@ -6,6 +6,8 @@ import { COL_WIDTH, ROW_HEADER_WIDTH, ROW_HEIGHT, canvasHeight, layoutColumns, t
 import { formatCell } from './format.ts'
 import { DEFAULT_SELECTION, extendTo, focusToMatrixOrigin, isInSelection, navKeyOf, navigate, singleAt } from './selection.ts'
 import type { Focus, Selection } from './selection.ts'
+import { buildClipboard, planPaste } from '../data/clipboard.ts'
+import type { ClipboardContent, PasteWrite } from '../data/clipboard.ts'
 import { applyGridCursors } from './cursors.ts'
 import './grid.css'
 
@@ -14,6 +16,10 @@ interface GridProps {
   def: StructDef
   /** 编辑提交（M5 写内存；写盘属 M7） */
   onEditCell?: (row: number, fieldName: string, value: string) => void
+  /** 粘贴批量写入 */
+  onApplyWrites?: (writes: PasteWrite[]) => void
+  /** 粘贴失败提示（null=清除） */
+  onPasteError?: (message: string | null) => void
 }
 
 interface DragState {
@@ -32,9 +38,10 @@ interface EditingCell {
  * 结构：viewport（滚动容器，tabIndex 接键盘）> header（sticky top）+ canvas（相对定位）> row（absolute top）> cell。
  * 编辑态（仅 string 字段）：双击 / F2 / 导航态直接键入（含 IME）进入；Enter/Tab 系提交后执行导航态行为；Esc 取消。
  */
-export function Grid({ table, def, onEditCell }: GridProps) {
+export function Grid({ table, def, onEditCell, onApplyWrites, onPasteError }: GridProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const clipboardRef = useRef<ClipboardContent | null>(null)
   const [scrollTop, setScrollTop] = useState(0)
   const [viewportH, setViewportH] = useState(0)
   const [selection, setSelection] = useState<Selection>(DEFAULT_SELECTION)
@@ -116,9 +123,39 @@ export function Grid({ table, def, onEditCell }: GridProps) {
     viewportRef.current?.focus()
   }
 
+  // ---- 剪切板（应用内值快照；写盘/系统剪切板集成属 M7+） ----
+  const copySelection = (): void => {
+    clipboardRef.current = buildClipboard(table.rows, def, selection)
+    onPasteError?.(null)
+  }
+
+  const pasteAtSelection = (): void => {
+    const clip = clipboardRef.current
+    if (!clip) return
+    const plan = planPaste(clip, selection, def, rowCount, colCount)
+    if (plan.status === 'error') {
+      onPasteError?.(plan.message)
+      return
+    }
+    onApplyWrites?.(plan.writes)
+    onPasteError?.(null)
+  }
+
   // ---- 键盘：导航态（viewport 级） ----
   const onKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>): void => {
     if (editing) return // 编辑态按键由输入框处理
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+      if (e.key === 'c' || e.key === 'C') {
+        e.preventDefault()
+        copySelection()
+        return
+      }
+      if (e.key === 'v' || e.key === 'V') {
+        e.preventDefault()
+        pasteAtSelection()
+        return
+      }
+    }
     if (e.key === 'F2') {
       e.preventDefault()
       enterEdit(selection.focus.row, selection.focus.col)

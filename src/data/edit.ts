@@ -1,10 +1,11 @@
 import type { FieldDef, StructDef, TableRow } from './types.ts'
 
 /**
- * 单元格编辑提交（纯函数，写时复制）：
+ * 单元格写入提交（纯函数，写时复制）：
  * 返回新 rows 数组；目标行越过末尾时用空记录 {} 补齐（稀疏新增，保存时压缩属 M7）。
+ * value 为 unknown：键盘编辑传 string，粘贴可传任意单元格值（number/map/…/undefined=清空）。
  */
-export function applyCellEdit(rows: readonly TableRow[], rowIndex: number, fieldName: string, value: string): TableRow[] {
+export function applyCellEdit(rows: readonly TableRow[], rowIndex: number, fieldName: string, value: unknown): TableRow[] {
   const next = rows.slice()
   while (next.length <= rowIndex) next.push({})
   next[rowIndex] = { ...next[rowIndex], [fieldName]: value }

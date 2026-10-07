@@ -6,6 +6,7 @@
     "fields": [
         { "name": "ID", "type": "string", "pk": true },
         { "name": "Name", "type": "string" },
-        { "name": "FuncName", "type": "string" }
+        { "name": "FuncName", "type": "string" },
+        { "name": "Priority", "type": "number", "default": 0 }
     ]
 }

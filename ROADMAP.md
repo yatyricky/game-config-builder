@@ -83,14 +83,15 @@
 
 ## M6 复制粘贴
 
-- 目标：单元格引用复制、隐式转换与 tiling 填充完全符合 spec。
-- 范围：ctrl+c 复制选中单元格引用；ctrl+v 写入目标选区；`defineImplicitConversion` 隐式转换表；无转换路径报错并阻断；选区不小于剪切板时 tiling 填充。
+- 目标：单元格复制、隐式转换与 tiling 填充完全符合 spec。
+- 范围：ctrl+c 复制选中单元格（应用内值快照）；ctrl+v 写入目标选区；`defineImplicitConversion` 隐式转换表；无转换路径报错并阻断；选区不小于剪切板时 tiling 填充。裁决（2026-10-08）：目标 1x1 → 完整剪切板贴一次（越工作区裁剪）；多选目标容纳不下 → 报错阻断；sample 演进加 Effect.Priority（number, default 0）。
 - 验收：
   - [ ] number→string（已定义路径）转换生效
   - [ ] string→number（未定义路径）报错且操作被阻断
-  - [ ] tiling 两例与 spec 结果逐格一致：单格贴整列；2×2 贴 6 宽 3 高
+  - [ ] tiling 两例与 spec 结果逐格一致：单格贴整列；2×2 贴 6 宽 3 高（只写完整瓦片，第三行不动）
+  - [ ] 目标 1x1 贴完整剪切板；多选容纳不下报错阻断（2026-10-08 裁决）
 - spec 依据：编辑一节复制粘贴两条及两个 tiling 例子。
-- 依赖：M5（粘贴走编辑提交通路）。
+- 依赖：M5（粘贴走编辑提交通路）。任务卡：tasks/M6.md。
 
 ## M7 保存与菜单
 

@@ -3,6 +3,7 @@ import { loadProject } from './data/loader.ts'
 import type { LoadResult } from './data/loader.ts'
 import { fsaSource } from './data/dirSource.ts'
 import { applyCellEdit } from './data/edit.ts'
+import type { PasteWrite } from './data/clipboard.ts'
 import { Grid } from './grid/Grid.tsx'
 import type { StructDef, Table } from './data/types.ts'
 import './app.css'
@@ -24,6 +25,27 @@ export function App() {
       const next = !s
       setStressTable(next ? makeStressTable() : null)
       return next
+    })
+  }
+
+  const [pasteError, setPasteError] = useState<string | null>(null)
+
+  /** M6：粘贴批量写入（同一写时复制通路） */
+  const handleApplyWrites = (tableName: string, writes: PasteWrite[]): void => {
+    const apply = (rows: Table['rows']): Table['rows'] => writes.reduce((acc, w) => applyCellEdit(acc, w.row, w.fieldName, w.value), rows)
+    if (stress && tableName === 'Stress') {
+      setStressTable(prev => (prev ? { ...prev, table: { ...prev.table, rows: apply(prev.table.rows) } } : prev))
+      return
+    }
+    setResult(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        project: {
+          ...prev.project,
+          tables: prev.project.tables.map(t => (t.name === tableName ? { ...t, rows: apply(t.rows) } : t)),
+        },
+      }
     })
   }
 
@@ -87,12 +109,15 @@ export function App() {
         )}
       </div>
       {error && <p className="error">{error}</p>}
+      {pasteError && <p className="error">{pasteError}</p>}
       {stress && stressTable ? (
         <div className="grid-area">
           <Grid
             table={stressTable.table}
             def={stressTable.def}
             onEditCell={(row, fieldName, value) => handleEditCell('Stress', row, fieldName, value)}
+            onApplyWrites={writes => handleApplyWrites('Stress', writes)}
+            onPasteError={setPasteError}
           />
         </div>
       ) : result ? (
@@ -105,6 +130,8 @@ export function App() {
                 table={table}
                 def={structDef}
                 onEditCell={(row, fieldName, value) => handleEditCell(table.name, row, fieldName, value)}
+                onApplyWrites={writes => handleApplyWrites(table.name, writes)}
+                onPasteError={setPasteError}
               />
             </div>
           ) : (
