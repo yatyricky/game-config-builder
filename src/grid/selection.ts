@@ -47,13 +47,17 @@ export type NavKey =
   | 'ArrowDown'
   | 'ArrowLeft'
   | 'ArrowRight'
+  | 'ShiftUp'
+  | 'ShiftDown'
+  | 'ShiftLeft'
+  | 'ShiftRight'
   | 'Enter'
   | 'ShiftEnter'
   | 'Tab'
   | 'ShiftTab'
 
-/** 单选导航态的按键语义：回车系与 Tab 系等效于对应方向键 */
-const DELTA: Record<NavKey, readonly [number, number]> = {
+/** 单选导航态的按键语义：回车系与 Tab 系等效于对应方向键（shift+方向键是矩阵调整，不走 DELTA） */
+const DELTA: Record<Exclude<NavKey, 'ShiftUp' | 'ShiftDown' | 'ShiftLeft' | 'ShiftRight'>, readonly [number, number]> = {
   ArrowUp: [-1, 0],
   ArrowDown: [1, 0],
   ArrowLeft: [0, -1],
@@ -66,12 +70,16 @@ const DELTA: Record<NavKey, readonly [number, number]> = {
 
 /**
  * 导航总入口（纯函数）。
+ * shift+方向键：调整矩阵边界——焦点在箭头方向最远端且该方向 ≥2 时收缩对侧，否则向箭头方向扩展；焦点原地不动，扩展受工作区钳制（1x1 也参与，见 resize）。
  * 单选：四方向 + 回车/Tab 系等效方向键，四条边界不生效、不回绕（回绕是矩阵环流专属）。
  * 多选：方向键立即退出多选——焦点视同所选单元格，原地执行单选步进（范围收拢为焦点）；
  * 回车/Tab 系在矩阵内环流，范围不变，回绕按 spec 顺序：Enter 行+1 溢出回首行并列+1、
  * 列溢出回首列；ShiftEnter 对称；Tab 列+1 溢出回首列并行+1、行溢出回首行；ShiftTab 对称。
  */
 export function navigate(s: Selection, key: NavKey, rowCount: number, colCount: number): Selection {
+  if (key === 'ShiftUp' || key === 'ShiftDown' || key === 'ShiftLeft' || key === 'ShiftRight') {
+    return resize(s, key, rowCount, colCount)
+  }
   if (!isMatrix(s)) {
     return stepSingle(s, key, rowCount, colCount)
   }
@@ -82,9 +90,31 @@ export function navigate(s: Selection, key: NavKey, rowCount: number, colCount: 
   return stepSingle(singleAt(s.focus), key, rowCount, colCount)
 }
 
+/**
+ * shift+方向键调整矩阵：收缩 ⟺ 焦点在箭头方向最远端 且 该方向 ≥2 → 取消对侧一列/行；
+ * 否则向箭头方向扩展一列/行（不得超越工作区，越界无效）。焦点原地不动；入参不被修改。
+ */
+function resize(s: Selection, key: 'ShiftUp' | 'ShiftDown' | 'ShiftLeft' | 'ShiftRight', rowCount: number, colCount: number): Selection {
+  switch (key) {
+    case 'ShiftRight':
+      if (s.focus.col === s.colEnd && s.colEnd > s.colStart) return { ...s, colStart: s.colStart + 1 }
+      return s.colEnd + 1 < colCount ? { ...s, colEnd: s.colEnd + 1 } : s
+    case 'ShiftLeft':
+      if (s.focus.col === s.colStart && s.colEnd > s.colStart) return { ...s, colEnd: s.colEnd - 1 }
+      return s.colStart - 1 >= 0 ? { ...s, colStart: s.colStart - 1 } : s
+    case 'ShiftDown':
+      if (s.focus.row === s.rowEnd && s.rowEnd > s.rowStart) return { ...s, rowStart: s.rowStart + 1 }
+      return s.rowEnd + 1 < rowCount ? { ...s, rowEnd: s.rowEnd + 1 } : s
+    case 'ShiftUp':
+      if (s.focus.row === s.rowStart && s.rowEnd > s.rowStart) return { ...s, rowEnd: s.rowEnd - 1 }
+      return s.rowStart - 1 >= 0 ? { ...s, rowStart: s.rowStart - 1 } : s
+  }
+}
+
 function stepSingle(s: Selection, key: NavKey, rowCount: number, colCount: number): Selection {
   if (rowCount === 0 || colCount === 0) return s
-  const [dr, dc] = DELTA[key]
+  // resize 键不会走到这里（navigate 已先行分流）
+  const [dr, dc] = DELTA[key as Exclude<NavKey, 'ShiftUp' | 'ShiftDown' | 'ShiftLeft' | 'ShiftRight'>]
   const row = s.focus.row + dr
   const col = s.focus.col + dc
   if (row < 0 || row >= rowCount || col < 0 || col >= colCount) return s
@@ -124,17 +154,17 @@ export function focusToMatrixOrigin(s: Selection): Selection {
   return { ...s, focus: { row: s.rowStart, col: s.colStart } }
 }
 
-/** 键盘事件 → NavKey；非导航键返回 null */
+/** 键盘事件 → NavKey；非导航键返回 null。方向键区分 shift：普通=移动，shift=调整矩阵 */
 export function navKeyOf(key: string, shiftKey: boolean): NavKey | null {
   switch (key) {
     case 'ArrowUp':
-      return 'ArrowUp'
+      return shiftKey ? 'ShiftUp' : 'ArrowUp'
     case 'ArrowDown':
-      return 'ArrowDown'
+      return shiftKey ? 'ShiftDown' : 'ArrowDown'
     case 'ArrowLeft':
-      return 'ArrowLeft'
+      return shiftKey ? 'ShiftLeft' : 'ArrowLeft'
     case 'ArrowRight':
-      return 'ArrowRight'
+      return shiftKey ? 'ShiftRight' : 'ArrowRight'
     case 'Enter':
       return shiftKey ? 'ShiftEnter' : 'Enter'
     case 'Tab':

@@ -119,6 +119,77 @@ test('多选：ShiftTab 环流（列退位，溢出回末列且行-1）', () => 
   assert.deepEqual(navigate(mat(1, 2), 'ShiftTab', RC, CC).focus, { row: 3, col: 4 })
 })
 
+// ---- M4 增补：shift+方向键调整矩阵（统一规则：焦点在箭头方向最远端且该方向 ≥2 → 收缩对侧；否则扩展；焦点原地不动）----
+
+test('shift+右：三分支', () => {
+  // 一列 → 右扩
+  const oneCol: Selection = { rowStart: 1, rowEnd: 3, colStart: 2, colEnd: 2, focus: { row: 2, col: 2 } }
+  assert.deepEqual(navigate(oneCol, 'ShiftRight', RC, CC), { ...oneCol, colEnd: 3 })
+  // 2+ 列、焦点不在末列 → 右扩（不贴工作区右缘，否则会被钳制）
+  const m: Selection = { rowStart: 1, rowEnd: 3, colStart: 1, colEnd: 3, focus: { row: 2, col: 2 } }
+  assert.deepEqual(navigate(m, 'ShiftRight', RC, CC), { ...m, colEnd: 4 })
+  // 2+ 列、焦点在末列 → 缩最左列
+  const shrunk = navigate(mat(3, 4), 'ShiftRight', RC, CC)
+  assert.deepEqual(shrunk, { rowStart: 1, rowEnd: 3, colStart: 3, colEnd: 4, focus: { row: 3, col: 4 } })
+})
+
+test('shift+左：三分支', () => {
+  const oneCol: Selection = { rowStart: 1, rowEnd: 3, colStart: 2, colEnd: 2, focus: { row: 2, col: 2 } }
+  assert.deepEqual(navigate(oneCol, 'ShiftLeft', RC, CC), { ...oneCol, colStart: 1 })
+  // 焦点不在首列 → 左扩
+  const m: Selection = { rowStart: 1, rowEnd: 3, colStart: 2, colEnd: 4, focus: { row: 2, col: 3 } }
+  assert.deepEqual(navigate(m, 'ShiftLeft', RC, CC), { ...m, colStart: 1 })
+  // 焦点在首列 → 缩最右列
+  assert.deepEqual(navigate(mat(2, 2), 'ShiftLeft', RC, CC), { rowStart: 1, rowEnd: 3, colStart: 2, colEnd: 3, focus: { row: 2, col: 2 } })
+})
+
+test('shift+下：三分支', () => {
+  const oneRow: Selection = { rowStart: 1, rowEnd: 1, colStart: 2, colEnd: 4, focus: { row: 1, col: 3 } }
+  assert.deepEqual(navigate(oneRow, 'ShiftDown', RC, CC), { ...oneRow, rowEnd: 2 })
+  assert.deepEqual(navigate(mat(2, 3), 'ShiftDown', RC, CC), { ...mat(2, 3), rowEnd: 4 })
+  // 焦点在末行 → 缩最上行
+  assert.deepEqual(navigate(mat(3, 3), 'ShiftDown', RC, CC), { rowStart: 2, rowEnd: 3, colStart: 2, colEnd: 4, focus: { row: 3, col: 3 } })
+})
+
+test('shift+上：三分支', () => {
+  const oneRow: Selection = { rowStart: 1, rowEnd: 1, colStart: 2, colEnd: 4, focus: { row: 1, col: 3 } }
+  assert.deepEqual(navigate(oneRow, 'ShiftUp', RC, CC), { ...oneRow, rowStart: 0 })
+  assert.deepEqual(navigate(mat(2, 3), 'ShiftUp', RC, CC), { ...mat(2, 3), rowStart: 0 })
+  // 焦点在首行 → 缩最下行
+  assert.deepEqual(navigate(mat(1, 3), 'ShiftUp', RC, CC), { rowStart: 1, rowEnd: 2, colStart: 2, colEnd: 4, focus: { row: 1, col: 3 } })
+})
+
+test('shift+方向键：1x1 起步连续扩展', () => {
+  let s = single(2, 2)
+  s = navigate(s, 'ShiftRight', RC, CC)
+  s = navigate(s, 'ShiftRight', RC, CC)
+  s = navigate(s, 'ShiftDown', RC, CC)
+  assert.deepEqual(s, { rowStart: 2, rowEnd: 3, colStart: 2, colEnd: 4, focus: { row: 2, col: 2 } })
+})
+
+test('shift+方向键：扩展受工作区边界钳制（no-op）', () => {
+  // 矩阵已达最右列、焦点不在末列 → 扩展意图但越界 → 原样
+  const atRight: Selection = { rowStart: 0, rowEnd: 2, colStart: 3, colEnd: 4, focus: { row: 1, col: 3 } }
+  assert.deepEqual(navigate(atRight, 'ShiftRight', RC, CC), atRight)
+  const atLeft: Selection = { rowStart: 0, rowEnd: 2, colStart: 0, colEnd: 2, focus: { row: 1, col: 2 } }
+  assert.deepEqual(navigate(atLeft, 'ShiftLeft', RC, CC), atLeft)
+  const atBottom: Selection = { rowStart: RC - 3, rowEnd: RC - 1, colStart: 0, colEnd: 2, focus: { row: RC - 2, col: 1 } }
+  assert.deepEqual(navigate(atBottom, 'ShiftDown', RC, CC), atBottom)
+  const atTop: Selection = { rowStart: 0, rowEnd: 2, colStart: 0, colEnd: 2, focus: { row: 1, col: 1 } }
+  assert.deepEqual(navigate(atTop, 'ShiftUp', RC, CC), atTop)
+})
+
+test('shift+方向键：焦点全程原地不动，入参不被修改', () => {
+  const s = mat(2, 3)
+  for (const key of ['ShiftUp', 'ShiftDown', 'ShiftLeft', 'ShiftRight'] as const) {
+    assert.deepEqual(navigate(s, key, RC, CC).focus, s.focus)
+  }
+  const before = JSON.stringify(s)
+  navigate(s, 'ShiftRight', RC, CC)
+  navigate(s, 'ShiftDown', RC, CC)
+  assert.equal(JSON.stringify(s), before)
+})
+
 test('多选：入参不被修改', () => {
   const s = mat(2, 3)
   const before = JSON.stringify(s)
@@ -140,7 +211,9 @@ test('focusToMatrixOrigin：焦点归位首行首列，范围不变', () => {
 
 test('navKeyOf 映射与 shift 变体', () => {
   assert.equal(navKeyOf('ArrowDown', false), 'ArrowDown')
-  assert.equal(navKeyOf('ArrowUp', true), 'ArrowUp')
+  assert.equal(navKeyOf('ArrowUp', true), 'ShiftUp')
+  assert.equal(navKeyOf('ArrowLeft', true), 'ShiftLeft')
+  assert.equal(navKeyOf('ArrowRight', true), 'ShiftRight')
   assert.equal(navKeyOf('Enter', false), 'Enter')
   assert.equal(navKeyOf('Enter', true), 'ShiftEnter')
   assert.equal(navKeyOf('Tab', false), 'Tab')
