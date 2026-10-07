@@ -185,3 +185,23 @@ test('自定义转换注册可扩展（spec API 形状）', () => {
   assert.equal(plan.status, 'ok')
   if (plan.status === 'ok') assert.equal(plan.writes[0].value, 8)
 })
+
+test('裁决：粘贴目标与复制源重叠 → 报错阻断', () => {
+  const clip: ClipboardContent = [[{ type: 'string', value: 'a' }]]
+  const plan = planPaste(clip, bounds(0, 0, 0, 0), strDef, 10, 6, bounds(0, 1, 0, 1))
+  assert.equal(plan.status, 'error')
+  if (plan.status === 'error') assert.match(plan.message, /重叠/)
+})
+
+test('裁决：粘贴目标与复制源相离 → 正常通过', () => {
+  const clip: ClipboardContent = [[{ type: 'string', value: 'a' }]]
+  const plan = planPaste(clip, bounds(5, 5, 5, 5), strDef, 10, 6, bounds(0, 1, 0, 1))
+  assert.equal(plan.status, 'ok')
+  if (plan.status === 'ok') assert.equal(plan.writes.length, 1)
+})
+
+test('source 省略 → 兼容旧调用', () => {
+  const clip: ClipboardContent = [[{ type: 'string', value: 'a' }]]
+  const plan = planPaste(clip, bounds(0, 0, 0, 0), strDef, 10, 6)
+  assert.equal(plan.status, 'ok')
+})

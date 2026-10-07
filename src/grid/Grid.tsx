@@ -7,7 +7,7 @@ import { formatCell } from './format.ts'
 import { DEFAULT_SELECTION, extendTo, focusToMatrixOrigin, isInSelection, navKeyOf, navigate, singleAt } from './selection.ts'
 import type { Focus, Selection } from './selection.ts'
 import { buildClipboard, planPaste } from '../data/clipboard.ts'
-import type { ClipboardContent, PasteWrite } from '../data/clipboard.ts'
+import type { ClipboardContent, PasteWrite, SelectionBounds } from '../data/clipboard.ts'
 import { applyGridCursors } from './cursors.ts'
 import './grid.css'
 
@@ -41,7 +41,8 @@ interface EditingCell {
 export function Grid({ table, def, onEditCell, onApplyWrites, onPasteError }: GridProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const clipboardRef = useRef<ClipboardContent | null>(null)
+  /** 剪切板（应用内值快照 + 源选区；跑马灯渲染依赖它，故用 state） */
+  const [clipboard, setClipboard] = useState<{ content: ClipboardContent; source: SelectionBounds } | null>(null)
   const [scrollTop, setScrollTop] = useState(0)
   const [viewportH, setViewportH] = useState(0)
   const [selection, setSelection] = useState<Selection>(DEFAULT_SELECTION)
@@ -105,9 +106,10 @@ export function Grid({ table, def, onEditCell, onApplyWrites, onPasteError }: Gr
     return typeof v === 'string' ? v : ''
   }
 
-  /** 进入编辑态（仅 string 字段；spec：其他类型 NotImplemented） */
+  /** 进入编辑态（仅 string 字段；spec：其他类型 NotImplemented）。裁决：进入编辑前清除剪切板 */
   const enterEdit = (row: number, col: number): void => {
     if (!isStringField(col)) return
+    setClipboard(null)
     setEditing({ row, col, value: cellString(row, col) })
   }
 
@@ -125,14 +127,13 @@ export function Grid({ table, def, onEditCell, onApplyWrites, onPasteError }: Gr
 
   // ---- 剪切板（应用内值快照；写盘/系统剪切板集成属 M7+） ----
   const copySelection = (): void => {
-    clipboardRef.current = buildClipboard(table.rows, def, selection)
+    setClipboard({ content: buildClipboard(table.rows, def, selection), source: selection })
     onPasteError?.(null)
   }
 
   const pasteAtSelection = (): void => {
-    const clip = clipboardRef.current
-    if (!clip) return
-    const plan = planPaste(clip, selection, def, rowCount, colCount)
+    if (!clipboard) return
+    const plan = planPaste(clipboard.content, selection, def, rowCount, colCount, clipboard.source)
     if (plan.status === 'error') {
       onPasteError?.(plan.message)
       return
@@ -166,7 +167,9 @@ export function Grid({ table, def, onEditCell, onApplyWrites, onPasteError }: Gr
     const printable = e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey
     const ime = e.key === 'Process' || e.nativeEvent.isComposing || e.keyCode === 229
     if ((printable || ime) && isStringField(selection.focus.col)) {
+      // 裁决：进入编辑前清除剪切板；同步挂载并聚焦输入框，让默认文本插入 / IME 组合落在输入框上
       flushSync(() => {
+        setClipboard(null)
         setEditing({ row: selection.focus.row, col: selection.focus.col, value: '' })
       })
       inputRef.current?.focus()
@@ -324,6 +327,19 @@ export function Grid({ table, def, onEditCell, onApplyWrites, onPasteError }: Gr
       </div>
       <div className="grid-canvas" style={{ width, height: canvasHeight(rowCount) }}>
         {rows}
+        {clipboard && (
+          <svg
+            className="copy-marquee"
+            style={{
+              left: ROW_HEADER_WIDTH + clipboard.source.colStart * COL_WIDTH,
+              top: clipboard.source.rowStart * ROW_HEIGHT,
+              width: (clipboard.source.colEnd - clipboard.source.colStart + 1) * COL_WIDTH,
+              height: (clipboard.source.rowEnd - clipboard.source.rowStart + 1) * ROW_HEIGHT,
+            }}
+          >
+            <rect />
+          </svg>
+        )}
       </div>
     </div>
   )

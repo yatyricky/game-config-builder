@@ -84,7 +84,7 @@
 ## M6 复制粘贴
 
 - 目标：单元格复制、隐式转换与 tiling 填充完全符合 spec。
-- 范围：ctrl+c 复制选中单元格（应用内值快照）；ctrl+v 写入目标选区；`defineImplicitConversion` 隐式转换表；无转换路径报错并阻断；选区不小于剪切板时 tiling 填充。裁决（2026-10-08）：目标 1x1 → 完整剪切板贴一次（越工作区裁剪）；多选目标容纳不下 → 报错阻断；sample 演进加 Effect.Priority（number, default 0）。
+- 范围：ctrl+c 复制选中单元格（应用内值快照 + 源区虚线跑马灯线框，编辑进入即清板，粘贴目标禁与源重叠——2026-10-08 增补）；ctrl+v 写入目标选区；`defineImplicitConversion` 隐式转换表；无转换路径报错并阻断；选区不小于剪切板时 tiling 填充。裁决（2026-10-08）：目标 1x1 → 完整剪切板贴一次（越工作区裁剪）；多选目标容纳不下 → 报错阻断；sample 演进加 Effect.Priority（number, default 0）。
 - 验收：
   - [ ] number→string（已定义路径）转换生效
   - [ ] string→number（未定义路径）报错且操作被阻断

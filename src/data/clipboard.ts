@@ -67,10 +67,22 @@ export function planPaste(
   def: StructDef,
   rowCount: number,
   colCount: number,
+  source?: SelectionBounds | null,
 ): PastePlan {
   const clipH = clipboard.length
   const clipW = clipboard[0]?.length ?? 0
   if (clipH === 0 || clipW === 0) return { status: 'error', message: '剪切板为空' }
+
+  // 裁决 2026-10-08：粘贴目标不允许与复制源有交集（闭区间矩形相交判定）
+  if (
+    source &&
+    source.rowStart <= target.rowEnd &&
+    target.rowStart <= source.rowEnd &&
+    source.colStart <= target.colEnd &&
+    target.colStart <= source.colEnd
+  ) {
+    return { status: 'error', message: '粘贴目标与复制源重叠，粘贴已阻断' }
+  }
 
   const single = target.rowStart === target.rowEnd && target.colStart === target.colEnd
   const targetW = target.colEnd - target.colStart + 1

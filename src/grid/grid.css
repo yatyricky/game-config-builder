@@ -63,6 +63,32 @@
   box-sizing: border-box;
 }
 
+/* 复制源跑马灯：焦点黑框改虚线套在复制区上（行进蚂蚁动画） */
+.copy-marquee {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.copy-marquee rect {
+  x: 1px;
+  y: 1px;
+  width: calc(100% - 2px);
+  height: calc(100% - 2px);
+  fill: none;
+  stroke: #111;
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  animation: march 0.6s linear infinite;
+}
+
+@keyframes march {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
 .row-head {
   position: sticky;
   left: 0;
