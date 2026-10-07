@@ -1,54 +1,141 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { DEFAULT_FOCUS, moveFocus, navKeyOf } from './selection.ts'
+import { DEFAULT_SELECTION, extendTo, focusToMatrixOrigin, isMatrix, isInSelection, navigate, navKeyOf, singleAt } from './selection.ts'
+import type { Focus, Selection } from './selection.ts'
 
 const RC = 12
 const CC = 5
 
-test('默认焦点为工作区第一行第一列', () => {
-  assert.deepEqual(DEFAULT_FOCUS, { row: 0, col: 0 })
+const single = (row: number, col: number): Selection => singleAt({ row, col })
+/** 矩阵：行 1..3、列 2..4（3x3），焦点位置可指定 */
+const mat = (focusRow: number, focusCol: number): Selection => ({
+  rowStart: 1,
+  rowEnd: 3,
+  colStart: 2,
+  colEnd: 4,
+  focus: { row: focusRow, col: focusCol },
 })
 
-test('方向键四向移动', () => {
-  const f = { row: 2, col: 1 }
-  assert.deepEqual(moveFocus(f, 'ArrowDown', RC, CC), { row: 3, col: 1 })
-  assert.deepEqual(moveFocus(f, 'ArrowUp', RC, CC), { row: 1, col: 1 })
-  assert.deepEqual(moveFocus(f, 'ArrowLeft', RC, CC), { row: 2, col: 0 })
-  assert.deepEqual(moveFocus(f, 'ArrowRight', RC, CC), { row: 2, col: 2 })
+test('默认选中工作区第一行第一列，且为单选', () => {
+  assert.deepEqual(DEFAULT_SELECTION, single(0, 0))
+  assert.equal(isMatrix(DEFAULT_SELECTION), false)
 })
 
-test('四条边界不生效（单选不回绕）', () => {
-  const tl = { row: 0, col: 0 }
-  assert.deepEqual(moveFocus(tl, 'ArrowLeft', RC, CC), tl)
-  assert.deepEqual(moveFocus(tl, 'ArrowUp', RC, CC), tl)
-  const br = { row: RC - 1, col: CC - 1 }
-  assert.deepEqual(moveFocus(br, 'ArrowDown', RC, CC), br)
-  assert.deepEqual(moveFocus(br, 'ArrowRight', RC, CC), br)
+test('isMatrix / isInSelection', () => {
+  assert.equal(isMatrix(mat(2, 3)), true)
+  assert.equal(isMatrix(single(2, 3)), false)
+  assert.equal(isInSelection(mat(2, 3), 3, 4), true)
+  assert.equal(isInSelection(mat(2, 3), 1, 1), false)
 })
 
-test('回车系与 Tab 系等效方向键', () => {
-  const f = { row: 2, col: 1 }
-  assert.deepEqual(moveFocus(f, 'Enter', RC, CC), moveFocus(f, 'ArrowDown', RC, CC))
-  assert.deepEqual(moveFocus(f, 'ShiftEnter', RC, CC), moveFocus(f, 'ArrowUp', RC, CC))
-  assert.deepEqual(moveFocus(f, 'Tab', RC, CC), moveFocus(f, 'ArrowRight', RC, CC))
-  assert.deepEqual(moveFocus(f, 'ShiftTab', RC, CC), moveFocus(f, 'ArrowLeft', RC, CC))
+test('extendTo：向右下/左上双向延伸，焦点随动', () => {
+  const start = single(2, 2)
+  assert.deepEqual(extendTo(start, { row: 4, col: 4 }), {
+    rowStart: 2, rowEnd: 4, colStart: 2, colEnd: 4, focus: { row: 4, col: 4 },
+  })
+  // 反方向（右下→左上）：range 一致
+  const big = extendTo(extendTo(start, { row: 4, col: 4 }), { row: 1, col: 2 })
+  assert.deepEqual(big, { rowStart: 1, rowEnd: 4, colStart: 2, colEnd: 4, focus: { row: 1, col: 2 } })
 })
 
-test('回车系同样受边界约束', () => {
-  const br = { row: RC - 1, col: CC - 1 }
-  assert.deepEqual(moveFocus(br, 'Enter', RC, CC), br)
-  const tl = { row: 0, col: 0 }
-  assert.deepEqual(moveFocus(tl, 'ShiftEnter', RC, CC), tl)
-  assert.deepEqual(moveFocus(tl, 'ShiftTab', RC, CC), tl)
+// ---- M3 单选语义回归 ----
+
+test('单选：方向键四向移动', () => {
+  assert.deepEqual(navigate(single(2, 1), 'ArrowDown', RC, CC), single(3, 1))
+  assert.deepEqual(navigate(single(2, 1), 'ArrowUp', RC, CC), single(1, 1))
+  assert.deepEqual(navigate(single(2, 1), 'ArrowLeft', RC, CC), single(2, 0))
+  assert.deepEqual(navigate(single(2, 1), 'ArrowRight', RC, CC), single(2, 2))
 })
 
-test('空工作区不动，入参不被修改', () => {
-  const f = { row: 0, col: 0 }
-  assert.deepEqual(moveFocus(f, 'ArrowDown', 0, CC), f)
-  assert.deepEqual(moveFocus(f, 'ArrowRight', RC, 0), f)
-  const before = { ...f }
-  moveFocus(f, 'ArrowDown', RC, CC)
-  assert.deepEqual(f, before)
+test('单选：四条边界不生效（不回绕）', () => {
+  assert.deepEqual(navigate(single(0, 0), 'ArrowLeft', RC, CC), single(0, 0))
+  assert.deepEqual(navigate(single(0, 0), 'ArrowUp', RC, CC), single(0, 0))
+  assert.deepEqual(navigate(single(RC - 1, CC - 1), 'ArrowDown', RC, CC), single(RC - 1, CC - 1))
+  assert.deepEqual(navigate(single(RC - 1, CC - 1), 'ArrowRight', RC, CC), single(RC - 1, CC - 1))
+})
+
+test('单选：回车系与 Tab 系等效方向键，同样受边界约束', () => {
+  assert.deepEqual(navigate(single(2, 1), 'Enter', RC, CC), single(3, 1))
+  assert.deepEqual(navigate(single(2, 1), 'ShiftEnter', RC, CC), single(1, 1))
+  assert.deepEqual(navigate(single(2, 1), 'Tab', RC, CC), single(2, 2))
+  assert.deepEqual(navigate(single(2, 1), 'ShiftTab', RC, CC), single(2, 0))
+  const br = single(RC - 1, CC - 1)
+  assert.deepEqual(navigate(br, 'Enter', RC, CC), br)
+})
+
+test('单选：空工作区不动，入参不被修改', () => {
+  const f = single(0, 0)
+  assert.deepEqual(navigate(f, 'ArrowDown', 0, CC), f)
+  assert.deepEqual(navigate(f, 'ArrowRight', RC, 0), f)
+  navigate(f, 'ArrowDown', RC, CC)
+  assert.deepEqual(f, single(0, 0))
+})
+
+// ---- M4 多选语义 ----
+
+test('多选：方向键退出矩阵并从焦点单选步进（范围收拢）', () => {
+  assert.deepEqual(navigate(mat(2, 3), 'ArrowDown', RC, CC), single(3, 3))
+  assert.deepEqual(navigate(mat(2, 3), 'ArrowLeft', RC, CC), single(2, 2))
+  // 焦点在矩阵上沿时退出后照常受工作区边界约束
+  assert.deepEqual(navigate(mat(1, 3), 'ArrowUp', RC, CC), single(0, 3))
+})
+
+test('多选：Enter 环流（行进位，溢出回绕），范围不变', () => {
+  assert.deepEqual(navigate(mat(1, 2), 'Enter', RC, CC).focus, { row: 2, col: 2 })
+  // 右下角：行溢出回首行、列+1 溢出回首列 → 回到左上；矩阵必须保持不塌缩
+  const r = navigate(mat(3, 4), 'Enter', RC, CC)
+  assert.deepEqual(r.focus, { row: 1, col: 2 })
+  assert.deepEqual({ rowStart: r.rowStart, rowEnd: r.rowEnd, colStart: r.colStart, colEnd: r.colEnd }, {
+    rowStart: 1, rowEnd: 3, colStart: 2, colEnd: 4,
+  })
+  assert.equal(isMatrix(r), true)
+  // 单行矩阵：行进位原地，列溢出回首列
+  const row: Selection = { rowStart: 2, rowEnd: 2, colStart: 0, colEnd: 2, focus: { row: 2, col: 2 } }
+  assert.deepEqual(navigate(row, 'Enter', RC, CC).focus, { row: 2, col: 0 })
+})
+
+test('多选：ShiftEnter 环流（行退位，溢出回末行且列-1）', () => {
+  assert.deepEqual(navigate(mat(2, 2), 'ShiftEnter', RC, CC).focus, { row: 1, col: 2 })
+  // 左上角：行溢出回末行、列-1 溢出回末列 → 右下
+  assert.deepEqual(navigate(mat(1, 2), 'ShiftEnter', RC, CC).focus, { row: 3, col: 4 })
+})
+
+test('多选：Tab 环流（列进位，溢出回绕），范围不变', () => {
+  assert.deepEqual(navigate(mat(2, 3), 'Tab', RC, CC).focus, { row: 2, col: 4 })
+  // 行末列：列溢出回首列、行+1
+  assert.deepEqual(navigate(mat(2, 4), 'Tab', RC, CC).focus, { row: 3, col: 2 })
+  // 右下角：列回绕回首列、行溢出回首行 → 左上，矩阵保持
+  const r = navigate(mat(3, 4), 'Tab', RC, CC)
+  assert.deepEqual(r.focus, { row: 1, col: 2 })
+  assert.equal(isMatrix(r), true)
+  // 单列矩阵：列进位原地，行溢出回首行
+  const col: Selection = { rowStart: 0, rowEnd: 2, colStart: 3, colEnd: 3, focus: { row: 2, col: 3 } }
+  assert.deepEqual(navigate(col, 'Tab', RC, CC).focus, { row: 0, col: 3 })
+})
+
+test('多选：ShiftTab 环流（列退位，溢出回末列且行-1）', () => {
+  assert.deepEqual(navigate(mat(1, 3), 'ShiftTab', RC, CC).focus, { row: 1, col: 2 })
+  // 左上角：列溢出回末列、行-1 溢出回末行 → 右下
+  assert.deepEqual(navigate(mat(1, 2), 'ShiftTab', RC, CC).focus, { row: 3, col: 4 })
+})
+
+test('多选：入参不被修改', () => {
+  const s = mat(2, 3)
+  const before = JSON.stringify(s)
+  navigate(s, 'Enter', RC, CC)
+  navigate(s, 'ArrowDown', RC, CC)
+  extendTo(s, { row: 0, col: 0 })
+  assert.equal(JSON.stringify(s), before)
+})
+
+test('focusToMatrixOrigin：焦点归位首行首列，范围不变', () => {
+  const m = mat(3, 4)
+  const r = focusToMatrixOrigin(m)
+  assert.deepEqual(r.focus, { row: 1, col: 2 })
+  assert.deepEqual({ rowStart: r.rowStart, rowEnd: r.rowEnd, colStart: r.colStart, colEnd: r.colEnd }, {
+    rowStart: 1, rowEnd: 3, colStart: 2, colEnd: 4,
+  })
+  assert.deepEqual(focusToMatrixOrigin(single(2, 3)).focus, { row: 2, col: 3 })
 })
 
 test('navKeyOf 映射与 shift 变体', () => {
@@ -60,4 +147,9 @@ test('navKeyOf 映射与 shift 变体', () => {
   assert.equal(navKeyOf('Tab', true), 'ShiftTab')
   assert.equal(navKeyOf('a', false), null)
   assert.equal(navKeyOf('Escape', true), null)
+})
+
+test('Focus 类型仅内部使用（编译期哨兵）', () => {
+  const f: Focus = { row: 0, col: 0 }
+  assert.deepEqual(f, { row: 0, col: 0 })
 })

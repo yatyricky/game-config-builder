@@ -4,6 +4,7 @@
   overflow: auto;
   height: 100%;
   background: #fff;
+  user-select: none;
 }
 
 .grid-header {
@@ -37,6 +38,10 @@
   text-overflow: ellipsis;
   background: #fff;
   cursor: var(--cursor-cell, cell);
+}
+
+.selected {
+  background: #e9e9e9;
 }
 
 .focused {
