@@ -29,7 +29,7 @@ function HotButton({ label, hotkey, onClick, disabled }: { label: ReactNode; hot
   const ctrlHeld = useCtrlHeld()
   return (
     <span className="hot-wrap">
-      {ctrlHeld && <span className="kb-badge">{hotkey}</span>}
+      {ctrlHeld && <span className="kb-badge below">{hotkey}</span>}
       <button onClick={onClick} disabled={disabled}>
         {label}
       </button>
