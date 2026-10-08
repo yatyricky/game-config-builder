@@ -257,12 +257,15 @@ body,
   top: calc(100% + 6px);
 }
 
-/* 按住 Ctrl：页签上方让出徽标空间（徽标绝对定位于各页签上方） */
-.tab {
-  position: relative;
+/* 快捷键徽标覆盖层：fixed 脱离文档流，与现有布局零关联 */
+.kb-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
 }
 
-.show-badges .tab-scroll {
-  margin-top: -26px;
-  padding-top: 26px;
+.kb-overlay .kb-badge {
+  position: fixed;
+  transform: translateX(-50%);
 }

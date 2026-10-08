@@ -1,29 +1,6 @@
-import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useCtrlHeld } from './useCtrlHeld.ts'
 import type { RecentEntry } from '../data/recents.ts'
-
-/** 按住 Ctrl 时按钮上方显示快捷键徽标 */
-function useCtrlHeld(): boolean {
-  const [held, setHeld] = useState(false)
-  useEffect(() => {
-    const down = (e: KeyboardEvent): void => {
-      if (e.key === 'Control') setHeld(true)
-    }
-    const up = (e: KeyboardEvent): void => {
-      if (e.key === 'Control') setHeld(false)
-    }
-    const blur = (): void => setHeld(false)
-    window.addEventListener('keydown', down)
-    window.addEventListener('keyup', up)
-    window.addEventListener('blur', blur)
-    return () => {
-      window.removeEventListener('keydown', down)
-      window.removeEventListener('keyup', up)
-      window.removeEventListener('blur', blur)
-    }
-  }, [])
-  return held
-}
 
 function HotButton({ label, hotkey, onClick, disabled }: { label: ReactNode; hotkey: string; onClick: () => void; disabled?: boolean }) {
   const ctrlHeld = useCtrlHeld()
