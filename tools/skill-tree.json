@@ -1,0 +1,222 @@
+{
+  "version": 1,
+  "playerLevel": 0,
+  "nodes": [
+    {
+      "id": "arcane_shock",
+      "icon": "",
+      "name": "奥术冲击",
+      "desc": "mag dd +, debuff: hit rate--\n",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 722,
+      "y": 203,
+      "points": 0
+    },
+    {
+      "id": "exposed_weakness",
+      "icon": "",
+      "name": "暴露破绽",
+      "desc": "",
+      "reqLevel": 2,
+      "maxLevel": 3,
+      "reqSkills": [],
+      "x": 551,
+      "y": 370,
+      "points": 0
+    },
+    {
+      "id": "arcane_pursuit",
+      "icon": "",
+      "name": "奥术追击",
+      "desc": "",
+      "reqLevel": 1,
+      "maxLevel": 3,
+      "reqSkills": [
+        "arcane_shock"
+      ],
+      "x": 665,
+      "y": 534,
+      "points": 0
+    },
+    {
+      "id": "arcane_erosion",
+      "icon": "",
+      "name": "奥术侵蚀",
+      "desc": "",
+      "reqLevel": 6,
+      "maxLevel": 1,
+      "reqSkills": [
+        "arcane_shock"
+      ],
+      "x": 837,
+      "y": 513,
+      "points": 0
+    },
+    {
+      "id": "shield_block",
+      "icon": "",
+      "name": "盾牌格挡",
+      "desc": "",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 1018,
+      "y": 232,
+      "points": 0
+    },
+    {
+      "id": "spell_block",
+      "icon": "",
+      "name": "法术格挡",
+      "desc": "被动：受击时冻结攻击者。",
+      "reqLevel": 3,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 1033,
+      "y": 412,
+      "points": 0
+    },
+    {
+      "id": "sun_flame_strike",
+      "icon": "",
+      "name": "阳炎冲击",
+      "desc": "",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 1392,
+      "y": 274,
+      "points": 0
+    },
+    {
+      "id": "enhanced_shield_block",
+      "icon": "",
+      "name": "强化盾牌格挡",
+      "desc": "",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 1056,
+      "y": 731,
+      "points": 0
+    },
+    {
+      "id": "avenging_missile",
+      "icon": "",
+      "name": "复仇飞弹",
+      "desc": "",
+      "reqLevel": 6,
+      "maxLevel": 1,
+      "reqSkills": [],
+      "x": 1181,
+      "y": 583,
+      "points": 0
+    },
+    {
+      "id": "perma_spell_block",
+      "icon": "",
+      "name": "永久法术格挡",
+      "desc": "",
+      "reqLevel": 0,
+      "maxLevel": 1,
+      "reqSkills": [
+        "spell_block"
+      ],
+      "x": 1026,
+      "y": 556,
+      "points": 0
+    },
+    {
+      "id": "arcane_torrent",
+      "icon": "",
+      "name": "奥术洪流",
+      "desc": "",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 1402,
+      "y": 472,
+      "points": 0
+    },
+    {
+      "id": "mana_steal",
+      "icon": "",
+      "name": "法力窃取",
+      "desc": "",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [
+        "arcane_torrent"
+      ],
+      "x": 1396,
+      "y": 646,
+      "points": 0
+    },
+    {
+      "id": "skill_1",
+      "icon": "",
+      "name": "快速奥术冲击",
+      "desc": "",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 1610,
+      "y": 674,
+      "points": 0
+    },
+    {
+      "id": "scorching_shield",
+      "icon": "",
+      "name": "灼热盾牌",
+      "desc": "",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 1020,
+      "y": 921,
+      "points": 0
+    },
+    {
+      "id": "shield_of_sindorei",
+      "icon": "",
+      "name": "辛多雷之盾",
+      "desc": "",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 1508,
+      "y": 789,
+      "points": 0
+    },
+    {
+      "id": "absorption_shield",
+      "icon": "",
+      "name": "吸收护盾",
+      "desc": "",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [
+        "shield_of_sindorei"
+      ],
+      "x": 1453,
+      "y": 960,
+      "points": 0
+    },
+    {
+      "id": "healing_shield",
+      "icon": "",
+      "name": "治疗之盾",
+      "desc": "",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [
+        "shield_of_sindorei"
+      ],
+      "x": 1632,
+      "y": 930,
+      "points": 0
+    }
+  ]
+}

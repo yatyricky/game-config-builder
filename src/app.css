@@ -13,28 +13,67 @@ body,
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 8px;
-  padding: 8px;
 }
 
-.toolbar {
+/* 顶栏：GCB [路径下拉] [打开] [保存] [导出] */
+.topbar {
   display: flex;
   gap: 8px;
   align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px solid #ddd;
+  background: #f7f7f7;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* spec：使用足够宽度的下拉菜单展示完整路径（FSA 只暴露目录名） */
+.path-select {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 13px;
+  padding: 3px 4px;
+}
+
+.topbar button {
+  flex: none;
+  font: inherit;
+  font-size: 13px;
+  padding: 3px 12px;
 }
 
 .error {
   color: #c0392b;
   margin: 0;
+  padding: 4px 8px 0;
+  font-size: 13px;
+  white-space: pre-wrap;
 }
 
-.issues {
+.notice {
+  color: #666;
   margin: 0;
+  padding: 4px 8px 0;
+  font-size: 13px;
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   padding: 8px;
-  background: #fdf3e7;
-  border: 1px solid #f0d0b0;
-  font-size: 12px;
-  white-space: pre-wrap;
+  gap: 8px;
+}
+
+.placeholder {
+  color: #888;
+  margin: auto;
+  font-size: 14px;
 }
 
 .grid-area {
@@ -46,4 +85,60 @@ body,
 .grid-area > .grid-viewport {
   flex: 1;
   border: 1px solid #d0d0d0;
+}
+
+/* 底栏：Schemas | 表页签（横滚 4px 滚动条）| [+新建表格] 冻结最右 */
+.tabbar {
+  display: flex;
+  align-items: flex-end;
+  border-top: 1px solid #ddd;
+  background: #f7f7f7;
+}
+
+.tab-scroll {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  overflow-x: auto;
+  padding: 4px 8px 0;
+}
+
+.tab-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tab-scroll::-webkit-scrollbar-thumb {
+  background: #aaa;
+}
+
+.tab-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tab {
+  flex: none;
+  border: 1px solid #ccc;
+  border-bottom: none;
+  background: #ececec;
+  padding: 4px 14px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tab.active {
+  background: #fff;
+  font-weight: 600;
+}
+
+.tab-new {
+  flex: none;
+  border: 1px solid #ccc;
+  border-bottom: none;
+  border-left: 1px solid #ddd;
+  background: #ececec;
+  padding: 4px 14px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
 }

@@ -37,3 +37,11 @@ export function fsaSource(root: FileSystemDirectoryHandle): DirSource {
     },
   }
 }
+
+/** 覆盖写工程根下的一个文件（自动保存/保存按钮用；需 readwrite 授权） */
+export async function fsaWriteFile(root: FileSystemDirectoryHandle, fileName: string, content: string): Promise<void> {
+  const handle = await root.getFileHandle(fileName, { create: true })
+  const writable = await handle.createWritable()
+  await writable.write(content)
+  await writable.close()
+}

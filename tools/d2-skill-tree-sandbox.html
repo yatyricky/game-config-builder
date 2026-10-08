@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>暗黑2 · 技能树沙盒</title>
+<style>
+  :root{
+    --gold:#c9a959; --gold-bright:#ffd76b; --gold-dim:#8a744a;
+    --parch:#e8d8ac; --ink:#0d0a06; --panel:#161009; --panel2:#1e1710;
+    --line:#3a2d1a; --danger:#c96a5a; --muted:#9a8a68;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:#0b0805;color:var(--parch);
+    font:14px/1.5 "Microsoft YaHei","PingFang SC","Segoe UI",sans-serif;
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  button{font-family:inherit}
+
+  #app{flex:1;display:grid;grid-template-columns:200px minmax(0,1fr) 320px;min-height:0}
+  aside{background:linear-gradient(180deg,var(--panel2),var(--panel));display:flex;flex-direction:column;min-height:0;overflow-y:auto}
+  #library{border-right:1px solid var(--line)}
+  #inspector{border-left:1px solid var(--line)}
+
+  .brand{padding:14px 12px 12px;border-bottom:1px solid var(--line)}
+  .brand h1{margin:0;font-size:17px;color:var(--gold);letter-spacing:1px;font-family:Georgia,"Times New Roman",serif}
+  .brand small{color:var(--muted);font-size:11px}
+  .panel-title{padding:12px 12px 6px;font-size:12px;color:var(--gold-dim);letter-spacing:3px}
+
+  .lib-item{display:flex;align-items:center;gap:10px;margin:4px 10px;padding:9px 10px;
+    background:#211910;border:1px solid #45341d;border-radius:6px;cursor:pointer;
+    color:var(--parch);text-align:left;transition:.15s;width:calc(100% - 20px)}
+  .lib-item:hover{border-color:var(--gold);box-shadow:0 0 10px rgba(201,169,89,.25);transform:translateX(2px)}
+  .lib-item .ico{font-size:18px;width:22px;text-align:center}
+  .lib-item b{display:block;font-size:13px}
+  .lib-item small{display:block;color:var(--muted);font-size:11px}
+  .lib-note{padding:10px 12px;color:#6f6248;font-size:11.5px;line-height:1.6}
+
+  #stage{position:relative;min-width:0;background:#0b0805;overflow:hidden}
+  #canvas{position:absolute;inset:0;display:block}
+  #canvas.hovering{cursor:pointer}
+  #canvas.dragging{cursor:grabbing}
+
+  #hud{position:absolute;top:14px;right:14px;background:rgba(16,11,6,.9);border:1px solid var(--line);
+    border-radius:8px;padding:10px 16px 10px 14px;box-shadow:0 4px 18px rgba(0,0,0,.5);user-select:none}
+  #hud .lv{font-size:11px;color:var(--muted);letter-spacing:2px}
+  #hud .lv b{display:block;font-size:28px;color:var(--gold-bright);font-family:Georgia,serif;line-height:1.1}
+  #hud .sub{font-size:11.5px;color:#b7a67c;margin-top:2px}
+  #hud .btn{margin-top:8px;font-size:12px;padding:4px 10px}
+
+  #hint{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;color:#8a7a58;font-size:12px;
+    background:rgba(11,8,5,.72);padding:4px 12px;border-radius:6px;pointer-events:none;white-space:nowrap}
+
+  /* ---------- 行头（节点吸附行，需求等级由行定义） ---------- */
+  #rowHeads{position:absolute;left:0;top:0;bottom:0;width:64px;z-index:6;pointer-events:none}
+  .row-head{position:absolute;left:0;width:64px;display:flex;align-items:center;justify-content:flex-end;
+    gap:4px;padding-right:6px}
+  .row-head .lv-tag{color:var(--gold-dim);font-size:11px;letter-spacing:1px}
+  .row-head input{pointer-events:auto;width:42px;background:rgba(15,11,6,.92);border:1px solid #453619;
+    border-radius:5px;color:var(--parch);text-align:center;font:12.5px/1.4 Consolas,"Courier New",monospace;
+    padding:4px 2px;outline:none}
+  .row-head input:focus{border-color:var(--gold);box-shadow:0 0 6px rgba(201,169,89,.25)}
+  .row-head input::-webkit-outer-spin-button,.row-head input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .row-head input{appearance:textfield;-moz-appearance:textfield}
+
+  #toasts{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;
+    align-items:center;gap:6px;z-index:30;pointer-events:none}
+  .toast{background:rgba(20,14,7,.95);border:1px solid var(--gold-dim);color:var(--parch);
+    padding:7px 16px;border-radius:6px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.55);
+    animation:toastIn .18s ease;white-space:nowrap}
+  .toast.warn{border-color:#a05a3f;color:#ffce9e}
+  .toast.err{border-color:#a04033;color:#ffb0a0}
+  .toast.out{opacity:0;transition:opacity .4s}
+  @keyframes toastIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1}}
+
+  #tooltip{position:absolute;display:none;max-width:270px;background:rgba(14,10,5,.97);
+    border:1px solid var(--gold-dim);border-radius:8px;padding:10px 12px;font-size:12.5px;
+    pointer-events:none;z-index:20;box-shadow:0 6px 24px rgba(0,0,0,.65)}
+  #tooltip .tt-name{color:var(--gold-bright);font-size:14px;margin-bottom:2px}
+  #tooltip .tt-id{color:#7a6a48;font-size:11px;margin-left:6px}
+  #tooltip .tt-desc{color:#c9b98d;margin:2px 0 6px;border-bottom:1px solid #3a2d1a;padding-bottom:6px}
+  #tooltip .tt-row{margin:2px 0;color:#cbbc93}
+  #tooltip .tt-row .dim{color:#7a6a48}
+  #tooltip .tt-status{margin-top:6px;padding-top:5px;border-top:1px solid #3a2d1a;font-weight:bold}
+
+  /* ---------- Inspector ---------- */
+  #inspHead{padding:14px 12px 10px;border-bottom:1px solid var(--line)}
+  #inspHead h2{margin:0;font-size:15px;color:var(--gold);letter-spacing:2px;font-family:Georgia,serif}
+  #inspEmpty{padding:34px 16px;text-align:center;color:#7a6a48;font-size:13px;line-height:1.9}
+  .field{padding:5px 12px}
+  .field label{display:block;font-size:11.5px;color:var(--gold-dim);letter-spacing:1px;margin-bottom:3px}
+  .field input[type=text],.field input[type=number],.field textarea{
+    width:100%;background:#0f0b06;border:1px solid #453619;border-radius:5px;color:var(--parch);
+    padding:6px 8px;font:13px/1.4 inherit;font-family:inherit;outline:none}
+  .field input:focus,.field textarea:focus{border-color:var(--gold);box-shadow:0 0 6px rgba(201,169,89,.25)}
+  .field textarea{resize:vertical;min-height:60px}
+  .field input[type=number]{width:100%}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:5px 12px}
+  .row2 .field{padding:0}
+  .divider{height:1px;background:var(--line);margin:9px 12px}
+  #iconPreview{max-width:100%;max-height:64px;margin-top:5px;border:1px solid var(--line);
+    border-radius:4px;background:#0f0b06;padding:3px;display:block}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;padding:2px 12px 6px}
+  .chip{display:inline-flex;align-items:center;gap:4px;background:#2a2012;border:1px solid #4c3b1f;
+    border-radius:20px;padding:2px 4px 2px 10px;font-size:12px;color:var(--parch)}
+  .chip i{color:#7a6a48;font-style:normal;font-size:11px}
+  .chip button{background:none;border:none;color:#c98a6a;cursor:pointer;font-size:13px;padding:0 4px;line-height:1}
+  .chip button:hover{color:#ff9d85}
+  .req-add{display:flex;gap:6px;padding:2px 12px 6px}
+  .req-add input{flex:1;background:#0f0b06;border:1px solid #453619;border-radius:5px;color:var(--parch);
+    padding:6px 8px;font:12.5px inherit;font-family:inherit;outline:none}
+  #inspFoot{margin-top:auto;padding:12px;display:flex;gap:8px}
+  #inspFoot .btn{flex:1}
+  .btn{background:linear-gradient(180deg,#2b2113,#1d1509);border:1px solid var(--gold-dim);color:var(--gold);
+    padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;letter-spacing:1px;transition:.15s}
+  .btn:hover:not(:disabled){border-color:var(--gold-bright);color:var(--gold-bright);box-shadow:0 0 10px rgba(255,215,107,.25)}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+  .btn.primary{background:linear-gradient(180deg,#4a3818,#33260f);border-color:var(--gold)}
+  .btn.danger{border-color:#7a4033;color:#e0896f}
+  .btn.danger:hover:not(:disabled){border-color:#c96a5a;color:#ff9d85;box-shadow:0 0 10px rgba(201,106,90,.3)}
+  #inspPtsVal{color:var(--gold-bright);font-weight:bold}
+
+  /* ---------- 数据栏 ---------- */
+  #databar{border-top:2px solid #4a3820;background:var(--panel);display:flex;flex-direction:column;height:210px;flex:none}
+  #dbarHead{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line)}
+  #dbarHead .title{color:var(--gold);letter-spacing:3px;font-size:13px}
+  .spacer{flex:1}
+  #jsonView{flex:1;width:100%;background:#0d0a05;color:#cfc09a;border:none;outline:none;
+    padding:10px 14px;font:12px/1.55 Consolas,"Courier New",monospace;resize:none}
+
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:#3a2d1a;border-radius:5px}
+  ::-webkit-scrollbar-thumb:hover{background:#4f3d24}
+  ::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- 左侧：控件库 -->
+  <aside id="library">
+    <div class="brand">
+      <h1>☠ 技能树沙盒</h1>
+      <small>Diablo II-like Sandbox</small>
+    </div>
+    <div class="panel-title">控件库</div>
+    <div id="libList"></div>
+    <div class="lib-note">点击左侧控件，在画布中央生成一个新的技能节点。<br>节点自动吸附所在行，需求等级跟随画布左侧行头数值。<br>生成后可在右侧 Inspector 中编辑属性。</div>
+  </aside>
+
+  <!-- 中间：画布 -->
+  <main id="stage">
+    <canvas id="canvas"></canvas>
+    <div id="rowHeads"></div>
+    <div id="hud">
+      <div class="lv">玩家等级 <b id="hudLevel">0</b></div>
+      <div class="sub">已点亮 <span id="hudLit">0</span> / <span id="hudTotal">0</span> 个技能</div>
+      <button class="btn" id="btnReset">重置点数</button>
+    </div>
+    <div id="tooltip"></div>
+    <div id="toasts"></div>
+    <div id="hint">中键：打开 Inspector · 左键：加点 · 右键：减 1 点 · 拖动：移动节点（吸附行）· Delete：删除选中 · 点击空白：取消选中</div>
+  </main>
+
+  <!-- 右侧：Inspector -->
+  <aside id="inspector">
+    <div id="inspHead"><h2>检查器 · Inspector</h2></div>
+    <div id="inspEmpty">未选中节点<br><small>中键点击画布中的技能节点进行查看与编辑</small></div>
+    <div id="inspForm" hidden>
+      <div class="field">
+        <label>ID</label>
+        <input type="text" id="inspId" spellcheck="false">
+      </div>
+      <div class="field">
+        <label>图标（URL，留空则显示名称）</label>
+        <input type="text" id="inspIcon" spellcheck="false" placeholder="https://… 或 data:image/…">
+        <img id="iconPreview" alt="" hidden>
+      </div>
+      <div class="field">
+        <label>名称</label>
+        <input type="text" id="inspName" spellcheck="false">
+      </div>
+      <div class="field">
+        <label>节点说明</label>
+        <textarea id="inspDesc" spellcheck="false"></textarea>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>需求等级（所在行决定）</label>
+          <input type="number" id="inspReqLevel" min="0" max="99" step="1" disabled title="该值由节点所在行决定，在画布左侧行头中编辑">
+        </div>
+        <div class="field">
+          <label>最大可点等级</label>
+          <input type="number" id="inspMaxLevel" min="1" max="99" step="1">
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
+        <label>当前点数</label>
+        <div>
+          <span id="inspPtsVal">0 / 1</span>
+          <button class="btn" id="inspAdd" style="padding:2px 10px;margin-left:8px">+1 点</button>
+          <button class="btn" id="inspSub" style="padding:2px 10px">−1 点</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
+        <label>需求前置技能 ID</label>
+        <div class="chips" id="inspChips"></div>
+        <div class="req-add">
+          <input type="text" id="inspReqInput" list="idList" spellcheck="false" placeholder="输入前置技能 id…">
+          <datalist id="idList"></datalist>
+          <button class="btn" id="inspReqAdd" style="padding:4px 12px">添加</button>
+        </div>
+      </div>
+      <div id="inspFoot">
+        <button class="btn danger" id="inspDelete">✕ 删除节点</button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- 底部：数据 -->
+<footer id="databar">
+  <div id="dbarHead">
+    <span class="title">画布 JSON</span>
+    <span class="spacer"></span>
+    <button class="btn primary" id="btnSave">⬇ 保存 JSON</button>
+    <button class="btn" id="btnUpload">⬆ 上传 JSON</button>
+    <button class="btn" id="btnApply">✓ 应用文本框</button>
+  </div>
+  <textarea id="jsonView" spellcheck="false"></textarea>
+</footer>
+<input type="file" id="fileInput" accept=".json,application/json" hidden>
+
+<script>
+(() => {
+'use strict';
+
+// ================= DOM =================
+const stage    = document.getElementById('stage');
+const canvas   = document.getElementById('canvas');
+const ctx      = canvas.getContext('2d');
+const rowHeadsEl = document.getElementById('rowHeads');
+const tooltip  = document.getElementById('tooltip');
+const toasts   = document.getElementById('toasts');
+const hudLevel = document.getElementById('hudLevel');
+const hudLit   = document.getElementById('hudLit');
+const hudTotal = document.getElementById('hudTotal');
+const jsonView = document.getElementById('jsonView');
+const fileInput= document.getElementById('fileInput');
+
+const inspForm  = document.getElementById('inspForm');
+const inspEmpty = document.getElementById('inspEmpty');
+const inspId    = document.getElementById('inspId');
+const inspIcon  = document.getElementById('inspIcon');
+const iconPreview = document.getElementById('iconPreview');
+const inspName  = document.getElementById('inspName');
+const inspDesc  = document.getElementById('inspDesc');
+const inspReqLevel = document.getElementById('inspReqLevel');
+const inspMaxLevel = document.getElementById('inspMaxLevel');
+const inspPtsVal= document.getElementById('inspPtsVal');
+const inspAdd   = document.getElementById('inspAdd');
+const inspSub   = document.getElementById('inspSub');
+const inspChips = document.getElementById('inspChips');
+const inspReqInput = document.getElementById('inspReqInput');
+const inspReqAdd= document.getElementById('inspReqAdd');
+const idList    = document.getElementById('idList');
+const inspDelete= document.getElementById('inspDelete');
+
+const DPR = Math.max(1, window.devicePixelRatio || 1);
+const NODE_W = 88, NODE_H = 88;
+const ROW_H = 176; // 行高：高于一个节点（节点 88 + 下方名称/点数标签）
+
+// ================= 状态 =================
+const state = {
+  nodes: [],        // {id,icon,name,desc,reqLevel,maxLevel,reqSkills[],x,y,points}
+  rowLevels: [],    // 每行的需求等级（行头 input 可改；节点 reqLevel 随行）
+  selectedId: null,
+  hoverId: null,
+  mouse: {x:0, y:0},
+  drag: null,       // {id,dx,dy,moved,startX,startY}
+  flashUntil: new Map(), // id -> timestamp（加点失败时红闪）
+  spawnCount: 0,
+};
+
+const nodeById = id => state.nodes.find(n => n.id === id);
+const selNode  = () => state.selectedId ? nodeById(state.selectedId) : null;
+const playerLevel = () => state.nodes.reduce((s, n) => s + n.points, 0);
+
+function uniqueId(base){
+  let i = 1;
+  while (state.nodes.some(n => n.id === base + '_' + i)) i++;
+  return base + '_' + i;
+}
+
+// 加点规则：等级匹配 + 前置至少 1 点（除此之外没有任何限制）
+function canPick(n){
+  const lv = playerLevel();
+  if (lv < n.reqLevel) return false;
+  return n.reqSkills.every(id => (nodeById(id)?.points ?? 0) >= 1);
+}
+function blockReason(n){
+  if (n.points >= n.maxLevel) return '已达到最大等级';
+  const lv = playerLevel();
+  if (lv < n.reqLevel) return `需求等级 ${n.reqLevel}（当前 ${lv}）`;
+  const unmet = n.reqSkills
+    .filter(id => (nodeById(id)?.points ?? 0) < 1)
+    .map(id => nodeById(id)?.name ?? id);
+  if (unmet.length) return '前置未满足：' + unmet.join('、');
+  return null;
+}
+function tryAllocate(n){
+  const reason = blockReason(n);
+  if (reason){
+    state.flashUntil.set(n.id, performance.now() + 500);
+    toast(`无法点亮「${n.name}」：${reason}`, 'warn');
+    return;
+  }
+  n.points++;
+  refreshAll();
+}
+function removePoint(n){
+  if (n.points > 0){ n.points--; refreshAll(); }
+}
+
+// ================= 控件库 =================
+const LIB_PRESETS = [
+  { icon:'⬡', label:'空白技能', sub:'通用节点', make:() => ({ name:'新技能', desc:'', maxLevel:5, reqLevel:0 }) },
+  { icon:'⚔️', label:'主动技能', sub:'消耗资源发动', make:() => ({ name:'新主动技能', desc:'消耗法力发动的攻击技能。', maxLevel:5, reqLevel:0 }) },
+  { icon:'✦', label:'被动技能', sub:'永久生效', make:() => ({ name:'新被动技能', desc:'永久生效的被动强化。', maxLevel:10, reqLevel:0 }) },
+  { icon:'☄️', label:'终极技能', sub:'需求等级 6 · 上限 1', make:() => ({ name:'终极技能', desc:'威力强大的最终技能。', maxLevel:1, reqLevel:6 }) },
+];
+function buildLibrary(){
+  const list = document.getElementById('libList');
+  for (const p of LIB_PRESETS){
+    const btn = document.createElement('button');
+    btn.className = 'lib-item';
+    btn.innerHTML = `<span class="ico">${p.icon}</span><span><b>${p.label}</b><small>${p.sub}</small></span>`;
+    btn.addEventListener('click', () => spawnNode(p));
+    list.appendChild(btn);
+  }
+}
+function spawnNode(preset){
+  const r = stage.getBoundingClientRect();
+  const i = state.spawnCount++;
+  const dx = ((i % 3) - 1) * 150, dy = (Math.floor(i / 3) - 1) * 130;
+  const base = preset.make();
+  const n = {
+    id: uniqueId('skill'),
+    ...base,
+    icon: base.icon || '',
+    desc: base.desc || '',
+    reqSkills: [],
+    points: 0,
+    x: Math.round(r.width / 2 + dx),
+    y: Math.round(r.height / 2 + dy),
+  };
+  state.nodes.push(n);
+  snapToRow(n); // 吸附所在行，需求等级随行
+  select(n.id);
+  refreshAll();
+  toast(`已在画布生成「${n.name}」`);
+}
+
+// ================= Canvas 尺寸与行 =================
+function resize(){
+  const r = stage.getBoundingClientRect();
+  canvas.width  = Math.max(1, Math.round(r.width * DPR));
+  canvas.height = Math.max(1, Math.round(r.height * DPR));
+  canvas.style.width  = r.width + 'px';
+  canvas.style.height = r.height + 'px';
+  buildRows();
+  // 窗口变化后让节点留在原行
+  for (const n of state.nodes){
+    const i = Math.min(state.rowLevels.length - 1, Math.max(0, Math.round((n.y - ROW_H / 2) / ROW_H)));
+    n.y = i * ROW_H + ROW_H / 2;
+  }
+}
+window.addEventListener('resize', resize);
+
+// 行头：每行一个 input 定义该行需求等级；落入该行的节点 reqLevel 随之
+let rowHeadInputs = [];
+function buildRows(){
+  const h = stage.getBoundingClientRect().height;
+  const count = Math.max(1, Math.ceil(h / ROW_H));
+  while (state.rowLevels.length < count) state.rowLevels.push(state.rowLevels.length);
+  state.rowLevels.length = count;
+  rowHeadInputs = [];
+  rowHeadsEl.innerHTML = '';
+  for (let i = 0; i < count; i++){
+    const cell = document.createElement('div');
+    cell.className = 'row-head';
+    cell.style.top = (i * ROW_H) + 'px';
+    cell.style.height = ROW_H + 'px';
+    const tag = document.createElement('span');
+    tag.className = 'lv-tag';
+    tag.textContent = 'Lv';
+    const input = document.createElement('input');
+    input.type = 'number'; input.min = '0'; input.max = '99'; input.step = '1';
+    input.value = state.rowLevels[i];
+    input.title = `第 ${i + 1} 行需求等级（该行节点随之变化）`;
+    input.addEventListener('change', () => setRowLevel(i, input));
+    input.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); input.blur(); } });
+    cell.appendChild(tag); cell.appendChild(input);
+    rowHeadsEl.appendChild(cell);
+    rowHeadInputs.push(input);
+  }
+}
+function syncRowHeads(){
+  rowHeadInputs.forEach((inp, i) => { inp.value = state.rowLevels[i]; });
+}
+function setRowLevel(i, input){
+  const v = clampInt(input.value, 0, 99, state.rowLevels[i]);
+  state.rowLevels[i] = v;
+  input.value = v;
+  for (const n of state.nodes) if (rowIndexOfY(n.y) === i) n.reqLevel = v;
+  refreshAll();
+}
+const rowIndexOfY = y => Math.min(state.rowLevels.length - 1, Math.max(0, Math.floor(y / ROW_H)));
+function snapToRow(n){
+  const i = rowIndexOfY(n.y);
+  n.y = i * ROW_H + ROW_H / 2;
+  n.reqLevel = state.rowLevels[i];
+}
+
+// ================= 图标缓存 =================
+const iconCache = new Map(); // url -> {img, ok, failed}
+function iconEntry(url){
+  if (!url) return null;
+  let e = iconCache.get(url);
+  if (!e){
+    e = { img: new Image(), ok: false, failed: false };
+    e.img.onload  = () => { e.ok = true; };
+    e.img.onerror = () => { e.failed = true; };
+    e.img.src = url;
+    iconCache.set(url, e);
+  }
+  return e;
+}
+
+// ================= 视觉状态 =================
+const THEMES = {
+  locked:  { border:'#57493a', fill:'#1b1611', name:'#93876f', pts:'#8d8272', glow:0,  glowColor:'' },
+  avail:   { border:'#c8a557', fill:'#231b10', name:'#e4d4a8', pts:'#cdb277', glow:7,  glowColor:'rgba(201,169,89,.5)' },
+  partial: { border:'#ecd28b', fill:'#2b2213', name:'#f0e2b6', pts:'#ecd28b', glow:10, glowColor:'rgba(236,210,139,.55)' },
+  maxed:   { border:'#ffd76b', fill:'#33270f', name:'#ffe9b0', pts:'#ffd76b', glow:14, glowColor:'rgba(255,215,107,.7)' },
+};
+function vstate(n){
+  if (n.points >= n.maxLevel) return 'maxed';
+  if (n.points > 0) return 'partial';
+  return canPick(n) ? 'avail' : 'locked';
+}
+
+// ================= 绘制 =================
+function roundRect(x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function edgeToward(n, other){
+  const hw = NODE_W / 2 + 4, hh = NODE_H / 2 + 4;
+  const dx = other.x - n.x, dy = other.y - n.y;
+  if (!dx && !dy) return { x:n.x, y:n.y - hh };
+  const sx = dx ? hw / Math.abs(dx) : Infinity;
+  const sy = dy ? hh / Math.abs(dy) : Infinity;
+  const s = Math.min(sx, sy);
+  return { x: n.x + dx * s, y: n.y + dy * s };
+}
+function drawArrow(a, b){
+  const sat = a.points >= 1;
+  const p1 = edgeToward(a, b), p2 = edgeToward(b, a);
+  ctx.save();
+  ctx.strokeStyle = sat ? '#d9b25c' : '#5f4f39';
+  ctx.lineWidth = sat ? 2.5 : 1.6;
+  if (sat){ ctx.shadowColor = 'rgba(217,178,92,.6)'; ctx.shadowBlur = 6; }
+  else ctx.setLineDash([7, 6]);
+  ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+  ctx.setLineDash([]); ctx.shadowBlur = 0;
+  const ang = Math.atan2(p2.y - p1.y, p2.x - p1.x), hl = 11;
+  ctx.fillStyle = sat ? '#e6c36a' : '#6b5940';
+  ctx.beginPath();
+  ctx.moveTo(p2.x, p2.y);
+  ctx.lineTo(p2.x - hl * Math.cos(ang - 0.44), p2.y - hl * Math.sin(ang - 0.44));
+  ctx.lineTo(p2.x - hl * Math.cos(ang + 0.44), p2.y - hl * Math.sin(ang + 0.44));
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function wrapText(text, maxW, maxLines){
+  const chars = [...String(text)];
+  const lines = []; let line = '';
+  ctx.font = '12px "Microsoft YaHei","PingFang SC",sans-serif';
+  for (const ch of chars){
+    if (line && ctx.measureText(line + ch).width > maxW){ lines.push(line); line = ch; if (lines.length === maxLines) break; }
+    else line += ch;
+  }
+  if (lines.length < maxLines && line) lines.push(line);
+  if (lines.length === maxLines && (lines[maxLines-1].length < [...String(text)].length || (lines.length === maxLines && line && lines[lines.length-1] === line && lines.join('').length < [...String(text)].length))){
+    lines[maxLines-1] = lines[maxLines-1].slice(0, -1) + '…';
+  }
+  return lines.length ? lines : [''];
+}
+function drawNode(n, t){
+  const st = vstate(n);
+  const th = THEMES[st];
+  const flash = (state.flashUntil.get(n.id) || 0) > t;
+  const x = n.x - NODE_W / 2, y = n.y - NODE_H / 2;
+
+  ctx.save();
+  // 底板 + 阴影
+  ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 4;
+  ctx.fillStyle = th.fill;
+  roundRect(x, y, NODE_W, NODE_H, 10); ctx.fill();
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+  // 边框（可点亮 / 满级带光晕）
+  ctx.lineWidth = n.id === state.hoverId ? 3 : 2;
+  if (th.glow){
+    const pulse = st === 'maxed' ? Math.sin(t / 280) * 3 + 4 : 0;
+    ctx.shadowColor = th.glowColor; ctx.shadowBlur = th.glow + pulse;
+  }
+  ctx.strokeStyle = flash ? '#ff5a4e' : th.border;
+  roundRect(x, y, NODE_W, NODE_H, 10); ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // 选中描边
+  if (n.id === state.selectedId){
+    ctx.lineWidth = 2; ctx.strokeStyle = '#ffe9a8';
+    roundRect(x - 5, y - 5, NODE_W + 10, NODE_H + 10, 13); ctx.stroke();
+  }
+
+  // 图标 / 名称（图标缺失时显示名称）
+  const entry = iconEntry(n.icon);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (entry && entry.ok){
+    if (st === 'locked'){ try { ctx.filter = 'grayscale(85%) brightness(0.75)'; } catch(_){} }
+    const s = Math.min(56 / entry.img.width, 56 / entry.img.height);
+    const dw = entry.img.width * s, dh = entry.img.height * s;
+    ctx.drawImage(entry.img, n.x - dw / 2, n.y - dh / 2, dw, dh);
+    try { ctx.filter = 'none'; } catch(_){}
+  } else {
+    ctx.fillStyle = th.name;
+    const lines = wrapText(n.name || '未命名', NODE_W - 18, 3);
+    const lh = 16, y0 = n.y - (lines.length - 1) * lh / 2;
+    lines.forEach((L, i) => ctx.fillText(L, n.x, y0 + i * lh));
+  }
+
+  // 名称 + 点数标签
+  ctx.shadowColor = 'rgba(0,0,0,.9)'; ctx.shadowBlur = 4;
+  ctx.font = '13px "Microsoft YaHei","PingFang SC",sans-serif';
+  ctx.fillStyle = th.name;
+  ctx.fillText(n.name || '未命名', n.x, y + NODE_H + 15);
+  ctx.font = 'bold 13px Consolas,"Courier New",monospace';
+  ctx.fillStyle = flash ? '#ff7a6e' : th.pts;
+  ctx.fillText(`${n.points} / ${n.maxLevel}`, n.x, y + NODE_H + 32);
+  ctx.restore();
+}
+function draw(t){
+  const w = canvas.width / DPR, h = canvas.height / DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  // 背景
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#191207'); g.addColorStop(1, '#0b0805');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = 'rgba(232,203,138,0.05)';
+  for (let gx = 22; gx < w; gx += 44)
+    for (let gy = 22; gy < h; gy += 44) ctx.fillRect(gx, gy, 1.5, 1.5);
+  const v = ctx.createRadialGradient(w/2, h/2, Math.min(w,h)*.35, w/2, h/2, Math.max(w,h)*.75);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.55)');
+  ctx.fillStyle = v; ctx.fillRect(0, 0, w, h);
+  // 行分隔线（节点吸附行）
+  ctx.strokeStyle = 'rgba(201,169,89,.12)';
+  ctx.lineWidth = 1; ctx.setLineDash([6, 8]);
+  for (let i = 1; i < state.rowLevels.length; i++){
+    const y = i * ROW_H + 0.5;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  // 箭头（依赖关系）
+  for (const n of state.nodes)
+    for (const rid of n.reqSkills){
+      const s = nodeById(rid);
+      if (s) drawArrow(s, n);
+    }
+  // 节点（选中的最后画，置顶）
+  for (const n of state.nodes) if (n.id !== state.selectedId) drawNode(n, t);
+  const sn = nodeById(state.selectedId);
+  if (sn) drawNode(sn, t);
+}
+(function loop(t){ draw(t || 0); requestAnimationFrame(loop); })();
+
+// ================= 交互 =================
+function mousePos(e){ return { x: e.offsetX, y: e.offsetY }; }
+function hitNode(x, y){
+  for (let i = state.nodes.length - 1; i >= 0; i--){
+    const n = state.nodes[i];
+    if (Math.abs(x - n.x) <= NODE_W/2 + 3 && Math.abs(y - n.y) <= NODE_H/2 + 3) return n;
+  }
+  return null;
+}
+canvas.addEventListener('mousedown', e => {
+  const p = mousePos(e);
+  const n = hitNode(p.x, p.y);
+  if (e.button === 1){
+    e.preventDefault(); // 阻止中键自动滚动
+    if (n) select(n.id); // 中键：打开 Inspector
+  } else if (e.button === 0 && n){
+    state.drag = { id: n.id, dx: p.x - n.x, dy: p.y - n.y, moved: false, startX: p.x, startY: p.y };
+  } else if (e.button === 0){
+    state.selectedId = null; // 点击空白：取消选中
+    refreshInspector();
+  } else if (e.button === 2 && n){
+    removePoint(n);
+  }
+});
+canvas.addEventListener('mousemove', e => {
+  const p = mousePos(e);
+  state.mouse = p;
+  if (state.drag){
+    const d = state.drag;
+    if (!d.moved && Math.hypot(p.x - d.startX, p.y - d.startY) > 4){
+      d.moved = true;
+      canvas.classList.add('dragging');
+      tooltip.style.display = 'none';
+    }
+    if (d.moved){
+      const n = nodeById(d.id);
+      if (n){
+        n.x = p.x - d.dx; n.y = p.y - d.dy;
+        const lvBefore = n.reqLevel;
+        snapToRow(n); // 吸附行，需求等级随行
+        if (n.reqLevel !== lvBefore) refreshAll(); else refreshJson();
+      }
+    }
+    return;
+  }
+  const n = hitNode(p.x, p.y);
+  state.hoverId = n ? n.id : null;
+  canvas.classList.toggle('hovering', !!n);
+  updateTooltip(p);
+});
+window.addEventListener('mouseup', e => {
+  if (e.button !== 0 || !state.drag) return;
+  const d = state.drag;
+  state.drag = null;
+  canvas.classList.remove('dragging');
+  if (!d.moved){
+    const n = nodeById(d.id);
+    if (n){ select(n.id); tryAllocate(n); }
+  }
+});
+canvas.addEventListener('mouseleave', () => {
+  state.hoverId = null;
+  canvas.classList.remove('hovering');
+  tooltip.style.display = 'none';
+});
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+window.addEventListener('keydown', e => {
+  if ((e.key === 'Delete' || e.key === 'Backspace') && state.selectedId){
+    const a = document.activeElement;
+    if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT')) return;
+    e.preventDefault();
+    deleteNode(state.selectedId);
+  }
+});
+
+// ================= 悬停提示 =================
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function updateTooltip(p){
+  const n = state.hoverId ? nodeById(state.hoverId) : null;
+  if (!n){ tooltip.style.display = 'none'; return; }
+  const lv = playerLevel();
+  const lvOk = lv >= n.reqLevel;
+  const parts = [];
+  parts.push(`<div class="tt-name">${esc(n.name || '未命名')}<span class="tt-id">#${esc(n.id)}</span></div>`);
+  if (n.desc) parts.push(`<div class="tt-desc">${esc(n.desc)}</div>`);
+  parts.push(`<div class="tt-row">点数 <b style="color:#ffd76b">${n.points} / ${n.maxLevel}</b></div>`);
+  parts.push(`<div class="tt-row">需求等级 <b style="color:${lvOk ? '#9fd78a' : '#ff8d7e'}">${n.reqLevel}</b><span class="dim">（当前 ${lv}）</span></div>`);
+  if (n.reqSkills.length){
+    const items = n.reqSkills.map(id => {
+      const s = nodeById(id);
+      const ok = (s?.points ?? 0) >= 1;
+      return `<span style="color:${ok ? '#9fd78a' : '#ff8d7e'}">${ok ? '✓' : '✗'} ${esc(s ? s.name : id)}</span>`;
+    }).join('　');
+    parts.push(`<div class="tt-row">前置 ${items}</div>`);
+  }
+  const reason = blockReason(n);
+  parts.push(`<div class="tt-status" style="color:${reason ? '#ff8d7e' : '#ffd76b'}">${reason ? '🔒 ' + esc(reason) : '✔ 可点亮'}</div>`);
+  tooltip.innerHTML = parts.join('');
+  tooltip.style.display = 'block';
+  const r = stage.getBoundingClientRect();
+  let tx = p.x + 18, ty = p.y + 18;
+  if (tx + tooltip.offsetWidth  > r.width  - 8) tx = p.x - tooltip.offsetWidth  - 16;
+  if (ty + tooltip.offsetHeight > r.height - 8) ty = p.y - tooltip.offsetHeight - 16;
+  tooltip.style.left = Math.max(4, tx) + 'px';
+  tooltip.style.top  = Math.max(4, ty) + 'px';
+}
+
+// ================= Toast =================
+function toast(msg, type){
+  const el = document.createElement('div');
+  el.className = 'toast' + (type ? ' ' + type : '');
+  el.textContent = msg;
+  toasts.appendChild(el);
+  setTimeout(() => el.classList.add('out'), 2200);
+  setTimeout(() => el.remove(), 2700);
+}
+
+// ================= Inspector =================
+function select(id){ state.selectedId = id; refreshInspector(); }
+function refreshInspector(){
+  const n = selNode();
+  inspForm.hidden = !n;
+  inspEmpty.style.display = n ? 'none' : 'block';
+  if (!n) return;
+  inspId.value = n.id;
+  inspIcon.value = n.icon;
+  if (n.icon){ iconPreview.src = n.icon; iconPreview.hidden = false; }
+  else iconPreview.hidden = true;
+  inspName.value = n.name;
+  inspDesc.value = n.desc;
+  inspReqLevel.value = n.reqLevel;
+  inspMaxLevel.value = n.maxLevel;
+  const reason = blockReason(n);
+  inspPtsVal.textContent = `${n.points} / ${n.maxLevel}`;
+  inspAdd.disabled = !!reason;
+  inspAdd.title = reason || '点亮 1 级';
+  inspSub.disabled = n.points <= 0;
+  // 前置列表 chips
+  inspChips.innerHTML = '';
+  if (!n.reqSkills.length){
+    inspChips.innerHTML = '<span style="color:#6f6248;font-size:12px">（无前置）</span>';
+  }
+  for (const rid of n.reqSkills){
+    const chip = document.createElement('span');
+    chip.className = 'chip';
+    const s = nodeById(rid);
+    chip.innerHTML = `<span>${esc(s ? s.name : rid)}</span><i>#${esc(rid)}</i>`;
+    const x = document.createElement('button');
+    x.textContent = '✕'; x.title = '移除该前置';
+    x.addEventListener('click', () => {
+      n.reqSkills = n.reqSkills.filter(id => id !== rid);
+      refreshAll();
+    });
+    chip.appendChild(x);
+    inspChips.appendChild(chip);
+  }
+  // datalist：除自身外的所有 id
+  idList.innerHTML = '';
+  for (const m of state.nodes){
+    if (m.id === n.id) continue;
+    const opt = document.createElement('option');
+    opt.value = m.id; opt.label = m.name;
+    idList.appendChild(opt);
+  }
+}
+function commitId(){
+  const n = selNode(); if (!n) return;
+  let v = inspId.value.trim();
+  if (!v) v = n.id;
+  while (v !== n.id && nodeById(v)) v += '_2';
+  const old = n.id;
+  n.id = v;
+  if (old !== v){
+    for (const m of state.nodes) m.reqSkills = m.reqSkills.map(id => id === old ? v : id);
+    state.selectedId = v;
+    toast(`ID 已改为「${v}」，关联引用已同步`);
+  }
+  inspId.value = v;
+  refreshAll();
+}
+inspId.addEventListener('change', commitId);
+inspId.addEventListener('blur', commitId);
+inspId.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); inspId.blur(); } });
+inspIcon.addEventListener('input', () => {
+  const n = selNode(); if (!n) return;
+  n.icon = inspIcon.value.trim();
+  if (n.icon){ iconPreview.src = n.icon; iconPreview.hidden = false; }
+  else iconPreview.hidden = true;
+  refreshJson();
+});
+inspName.addEventListener('input', () => {
+  const n = selNode(); if (!n) return;
+  n.name = inspName.value.trim() || '未命名';
+  refreshJson();
+});
+inspDesc.addEventListener('input', () => {
+  const n = selNode(); if (!n) return;
+  n.desc = inspDesc.value;
+  refreshJson();
+});
+function clampInt(v, min, max, dft){
+  v = parseInt(v, 10);
+  if (isNaN(v)) v = dft;
+  return Math.min(max, Math.max(min, v));
+}
+function commitMaxLevel(){
+  const n = selNode(); if (!n) return;
+  n.maxLevel = clampInt(inspMaxLevel.value, 1, 99, 1);
+  n.points = Math.min(n.points, n.maxLevel);
+  inspMaxLevel.value = n.maxLevel;
+  refreshAll();
+}
+inspMaxLevel.addEventListener('change', commitMaxLevel);
+inspMaxLevel.addEventListener('blur', commitMaxLevel);
+inspMaxLevel.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); inspMaxLevel.blur(); } });
+inspAdd.addEventListener('click', () => { const n = selNode(); if (n) tryAllocate(n); });
+inspSub.addEventListener('click', () => { const n = selNode(); if (n) removePoint(n); });
+inspReqAdd.addEventListener('click', addReq);
+inspReqInput.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); addReq(); } });
+function addReq(){
+  const n = selNode(); if (!n) return;
+  const v = inspReqInput.value.trim();
+  if (!v) return;
+  if (v === n.id)             toast('不能依赖自身', 'warn');
+  else if (!nodeById(v))      toast(`不存在技能 id「${v}」`, 'warn');
+  else if (n.reqSkills.includes(v)) toast('该前置已存在', 'warn');
+  else { n.reqSkills.push(v); inspReqInput.value = ''; refreshAll(); }
+}
+function deleteNode(id){
+  const n = nodeById(id);
+  if (!n) return;
+  state.nodes = state.nodes.filter(m => m.id !== id);
+  state.flashUntil.delete(id);
+  for (const m of state.nodes) m.reqSkills = m.reqSkills.filter(x => x !== id);
+  if (state.selectedId === id) state.selectedId = null;
+  refreshAll();
+  toast(`已删除节点「${n.name}」`);
+}
+inspDelete.addEventListener('click', () => { if (state.selectedId) deleteNode(state.selectedId); });
+
+document.getElementById('btnReset').addEventListener('click', () => {
+  state.nodes.forEach(n => n.points = 0);
+  refreshAll();
+  toast('已重置所有技能点');
+});
+
+// ================= 数据面板 =================
+function exportData(){
+  return {
+    version: 1,
+    rowLevels: [...state.rowLevels],
+    playerLevel: playerLevel(),
+    nodes: state.nodes.map(n => ({
+      id: n.id, icon: n.icon, name: n.name, desc: n.desc,
+      reqLevel: n.reqLevel, maxLevel: n.maxLevel,
+      reqSkills: [...n.reqSkills],
+      x: Math.round(n.x), y: Math.round(n.y), points: n.points,
+    })),
+  };
+}
+function refreshJson(){ jsonView.value = JSON.stringify(exportData(), null, 2); }
+function refreshHud(){
+  hudLevel.textContent = playerLevel();
+  hudLit.textContent = state.nodes.filter(n => n.points > 0).length;
+  hudTotal.textContent = state.nodes.length;
+}
+function refreshTooltipIfVisible(){
+  if (tooltip.style.display !== 'none' && state.hoverId) updateTooltip(state.mouse);
+}
+function refreshAll(){
+  refreshHud();
+  refreshInspector();
+  refreshJson();
+  refreshTooltipIfVisible();
+}
+
+document.getElementById('btnSave').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(exportData(), null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'skill-tree.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  toast('已下载 skill-tree.json');
+});
+document.getElementById('btnUpload').addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => {
+  const f = fileInput.files[0];
+  fileInput.value = '';
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => importData(rd.result);
+  rd.readAsText(f);
+});
+document.getElementById('btnApply').addEventListener('click', () => importData(jsonView.value));
+
+function importData(text){
+  let obj;
+  try { obj = JSON.parse(text); }
+  catch (e){ toast('JSON 解析失败：' + e.message, 'err'); return; }
+  const arr = Array.isArray(obj) ? obj : obj && obj.nodes;
+  if (!Array.isArray(arr)){ toast('JSON 格式不正确：需要 nodes 数组', 'err'); return; }
+  const r = stage.getBoundingClientRect();
+  const out = []; const seen = new Set();
+  arr.forEach((raw, i) => {
+    if (!raw || typeof raw !== 'object') return;
+    let id = String(raw.id ?? '').trim() || uniqueId('skill');
+    while (seen.has(id)) id += '_2';
+    seen.add(id);
+    const req = Array.isArray(raw.reqSkills) ? raw.reqSkills.map(String)
+              : (raw.reqSkills != null ? [String(raw.reqSkills)] : []);
+    const n = {
+      id,
+      name: String(raw.name ?? '未命名'),
+      icon: String(raw.icon ?? ''),
+      desc: String(raw.desc ?? ''),
+      reqLevel: clampInt(raw.reqLevel, 0, 99, 0),
+      maxLevel: clampInt(raw.maxLevel, 1, 99, 1),
+      reqSkills: [...new Set(req)],
+      x: Number.isFinite(+raw.x) ? +raw.x : r.width / 2 + ((i % 3) - 1) * 150,
+      y: Number.isFinite(+raw.y) ? +raw.y : r.height / 2 + (Math.floor(i / 3) - 1) * 130,
+      points: Math.max(0, clampInt(raw.points, 0, 999, 0)),
+    };
+    n.points = Math.min(n.points, n.maxLevel);
+    out.push(n);
+  });
+  // 丢弃指向不存在节点（或自身）的前置引用
+  for (const n of out)
+    n.reqSkills = n.reqSkills.filter(id => id !== n.id && out.some(m => m.id === id));
+  // 行等级：文档若带 rowLevels 则覆盖默认行号
+  if (Array.isArray(obj.rowLevels)){
+    obj.rowLevels.slice(0, state.rowLevels.length).forEach((v, i) => {
+      state.rowLevels[i] = clampInt(v, 0, 99, state.rowLevels[i]);
+    });
+    syncRowHeads();
+  }
+  // 节点吸附所在行，需求等级由行决定
+  for (const n of out) snapToRow(n);
+  state.nodes = out;
+  state.selectedId = null;
+  state.spawnCount = out.length;
+  refreshAll();
+  toast(`已加载 ${out.length} 个技能节点`);
+}
+
+// ================= 演示数据 =================
+function seedDemo(){
+  const r = stage.getBoundingClientRect();
+  const cx = r.width / 2;
+  const R = state.rowLevels.length;
+  // 演示占用前 4 行：需求等级 0 / 2 / 4 / 6（行数不足时收敛到可用行）
+  [0, 2, 4, 6].forEach((lv, i) => { if (i < R) state.rowLevels[i] = lv; });
+  syncRowHeads();
+  const rowY = i => Math.min(R - 1, i) * ROW_H + ROW_H / 2;
+  const lvOf = i => state.rowLevels[Math.min(R - 1, i)];
+  const demo = [
+    { id:'fire_slash',   name:'火焰斩',   desc:'挥出燃烧的斩击。',             row:0, x:cx-260 },
+    { id:'frost_nova',   name:'冰霜新星', desc:'以自身为中心释放冰爆。',       row:0, x:cx+250 },
+    { id:'fire_blast',   name:'烈焰冲击', desc:'向前方释放火焰冲击波。',       row:1, x:cx-140 },
+    { id:'fire_mastery', name:'火焰强化', desc:'被动：提升全部火焰伤害。',     row:1, x:cx-10 },
+    { id:'ice_armor',    name:'寒冰护甲', desc:'被动：受击时冻结攻击者。',     row:2, x:cx+250 },
+    { id:'meteor',       name:'陨石术',   desc:'召唤陨石轰击敌人。',           row:3, x:cx-70 },
+  ];
+  const reqMap = {
+    fire_blast:   ['fire_slash'],
+    fire_mastery: ['fire_slash'],
+    ice_armor:    ['frost_nova'],
+    meteor:       ['fire_blast', 'fire_mastery'],
+  };
+  const maxMap = { fire_slash:5, frost_nova:5, fire_blast:5, fire_mastery:10, ice_armor:5, meteor:1 };
+  state.nodes = demo.map(d => ({
+    id: d.id, name: d.name, icon: '', desc: d.desc,
+    reqLevel: lvOf(d.row), maxLevel: maxMap[d.id],
+    reqSkills: [...(reqMap[d.id] || [])],
+    x: Math.round(d.x), y: rowY(d.row), points: 0,
+  }));
+  state.spawnCount = demo.length;
+}
+
+// ================= 启动 =================
+buildLibrary();
+resize();
+seedDemo();
+refreshAll();
+})();
+</script>
+</body>
+</html>
