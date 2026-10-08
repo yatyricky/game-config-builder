@@ -48,22 +48,11 @@
   #hud .lv{font-size:11px;color:var(--muted);letter-spacing:2px}
   #hud .lv b{display:block;font-size:28px;color:var(--gold-bright);font-family:Georgia,serif;line-height:1.1}
   #hud .sub{font-size:11.5px;color:#b7a67c;margin-top:2px}
-  #hud .btn{margin-top:8px;font-size:12px;padding:4px 10px}
+  #hud .hud-btns{display:flex;gap:6px;margin-top:8px}
+  #hud .btn{font-size:12px;padding:4px 10px}
 
-  #hint{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;color:#8a7a58;font-size:12px;
-    background:rgba(11,8,5,.72);padding:4px 12px;border-radius:6px;pointer-events:none;white-space:nowrap}
-
-  /* ---------- 行头（节点吸附行，需求等级由行定义） ---------- */
-  #rowHeads{position:absolute;left:0;top:0;bottom:0;width:64px;z-index:6;pointer-events:none}
-  .row-head{position:absolute;left:0;width:64px;display:flex;align-items:center;justify-content:flex-end;
-    gap:4px;padding-right:6px}
-  .row-head .lv-tag{color:var(--gold-dim);font-size:11px;letter-spacing:1px}
-  .row-head input{pointer-events:auto;width:42px;background:rgba(15,11,6,.92);border:1px solid #453619;
-    border-radius:5px;color:var(--parch);text-align:center;font:12.5px/1.4 Consolas,"Courier New",monospace;
-    padding:4px 2px;outline:none}
-  .row-head input:focus{border-color:var(--gold);box-shadow:0 0 6px rgba(201,169,89,.25)}
-  .row-head input::-webkit-outer-spin-button,.row-head input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-  .row-head input{appearance:textfield;-moz-appearance:textfield}
+  #hint{position:absolute;left:14px;bottom:12px;color:#8a7a58;font-size:12px;
+    background:rgba(11,8,5,.72);padding:4px 12px;border-radius:6px;pointer-events:none}
 
   #toasts{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;
     align-items:center;gap:6px;z-index:30;pointer-events:none}
@@ -91,10 +80,10 @@
   #inspEmpty{padding:34px 16px;text-align:center;color:#7a6a48;font-size:13px;line-height:1.9}
   .field{padding:5px 12px}
   .field label{display:block;font-size:11.5px;color:var(--gold-dim);letter-spacing:1px;margin-bottom:3px}
-  .field input[type=text],.field input[type=number],.field textarea{
+  .field input[type=text],.field input[type=number],.field select,.field textarea{
     width:100%;background:#0f0b06;border:1px solid #453619;border-radius:5px;color:var(--parch);
     padding:6px 8px;font:13px/1.4 inherit;font-family:inherit;outline:none}
-  .field input:focus,.field textarea:focus{border-color:var(--gold);box-shadow:0 0 6px rgba(201,169,89,.25)}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);box-shadow:0 0 6px rgba(201,169,89,.25)}
   .field textarea{resize:vertical;min-height:60px}
   .field input[type=number]{width:100%}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:5px 12px}
@@ -147,21 +136,25 @@
     </div>
     <div class="panel-title">控件库</div>
     <div id="libList"></div>
-    <div class="lib-note">点击左侧控件，在画布中央生成一个新的技能节点。<br>节点自动吸附所在行，需求等级跟随画布左侧行头数值。<br>生成后可在右侧 Inspector 中编辑属性。</div>
+    <div class="lib-note">点击左侧控件，在画布中央生成一个新的技能节点。<br>生成后可在右侧 Inspector 中编辑属性。</div>
   </aside>
 
   <!-- 中间：画布 -->
   <main id="stage">
     <canvas id="canvas"></canvas>
-    <div id="rowHeads"></div>
     <div id="hud">
-      <div class="lv">玩家等级 <b id="hudLevel">0</b></div>
+      <div class="lv">玩家等级 <b id="hudLevel">1</b></div>
+      <div class="sub">可用天赋点 <b id="hudPts" style="color:var(--gold-bright)">1</b></div>
       <div class="sub">已点亮 <span id="hudLit">0</span> / <span id="hudTotal">0</span> 个技能</div>
-      <button class="btn" id="btnReset">重置点数</button>
+      <div class="hud-btns">
+        <button class="btn" id="btnLevelUp" title="等级 +1，并获得 1 天赋点">升级</button>
+        <button class="btn" id="btnGrant" title="特殊任务奖励：获得 1 天赋点">送天赋</button>
+        <button class="btn" id="btnReset" title="回到初始：等级 1 / 天赋点 1 / 节点全部清零">重置</button>
+      </div>
     </div>
     <div id="tooltip"></div>
     <div id="toasts"></div>
-    <div id="hint">中键：打开 Inspector · 左键：加点 · 右键：减 1 点 · 拖动：移动节点（吸附行）· Delete：删除选中 · 点击空白：取消选中</div>
+    <div id="hint">中键：打开 Inspector · 左键：加点 · 右键：减 1 点 · 拖动：移动节点（网格吸附）· Delete：删除选中 · 点击空白：取消选中</div>
   </main>
 
   <!-- 右侧：Inspector -->
@@ -186,14 +179,27 @@
         <label>节点说明</label>
         <textarea id="inspDesc" spellcheck="false"></textarea>
       </div>
+      <div class="field">
+        <label>节点形状</label>
+        <select id="inspShape">
+          <option value="rect">圆角矩形</option>
+          <option value="circle">圆形</option>
+        </select>
+      </div>
       <div class="row2">
         <div class="field">
-          <label>需求等级（所在行决定）</label>
-          <input type="number" id="inspReqLevel" min="0" max="99" step="1" disabled title="该值由节点所在行决定，在画布左侧行头中编辑">
+          <label>需求等级</label>
+          <input type="number" id="inspReqLevel" min="0" max="99" step="1">
         </div>
         <div class="field">
           <label>最大可点等级</label>
           <input type="number" id="inspMaxLevel" min="1" max="99" step="1">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>跳级要求</label>
+          <input type="number" id="inspSkip" min="0" max="99" step="1" title="升下一级需跳过的玩家等级数：1=每级间隔2级（如需求等级1的五级对应玩家等级1/3/5/7/9），0=不跳级">
         </div>
       </div>
       <div class="divider"></div>
@@ -243,10 +249,10 @@
 const stage    = document.getElementById('stage');
 const canvas   = document.getElementById('canvas');
 const ctx      = canvas.getContext('2d');
-const rowHeadsEl = document.getElementById('rowHeads');
 const tooltip  = document.getElementById('tooltip');
 const toasts   = document.getElementById('toasts');
 const hudLevel = document.getElementById('hudLevel');
+const hudPts   = document.getElementById('hudPts');
 const hudLit   = document.getElementById('hudLit');
 const hudTotal = document.getElementById('hudTotal');
 const jsonView = document.getElementById('jsonView');
@@ -259,8 +265,10 @@ const inspIcon  = document.getElementById('inspIcon');
 const iconPreview = document.getElementById('iconPreview');
 const inspName  = document.getElementById('inspName');
 const inspDesc  = document.getElementById('inspDesc');
+const inspShape = document.getElementById('inspShape');
 const inspReqLevel = document.getElementById('inspReqLevel');
 const inspMaxLevel = document.getElementById('inspMaxLevel');
+const inspSkip = document.getElementById('inspSkip');
 const inspPtsVal= document.getElementById('inspPtsVal');
 const inspAdd   = document.getElementById('inspAdd');
 const inspSub   = document.getElementById('inspSub');
@@ -272,12 +280,14 @@ const inspDelete= document.getElementById('inspDelete');
 
 const DPR = Math.max(1, window.devicePixelRatio || 1);
 const NODE_W = 88, NODE_H = 88;
-const ROW_H = 176; // 行高：高于一个节点（节点 88 + 下方名称/点数标签）
+const GRID = 44; // 网格吸附间距（与背景点阵同节奏：点在 22+44k，节点中心吸到点上）
+const snapGrid = v => Math.max(GRID / 2, 22 + Math.round((v - 22) / GRID) * GRID);
 
 // ================= 状态 =================
 const state = {
-  nodes: [],        // {id,icon,name,desc,reqLevel,maxLevel,reqSkills[],x,y,points}
-  rowLevels: [],    // 每行的需求等级（行头 input 可改；节点 reqLevel 随行）
+  nodes: [],        // {id,icon,name,desc,shape,skip,reqLevel,maxLevel,reqSkills[],x,y,points}
+  playerLevel: 1,   // 玩家等级（右上角"升级"按钮提升，不随加点变化）
+  talentPoints: 1,  // 可用天赋点（初始送 1；升级/送天赋获得，加点消耗）
   selectedId: null,
   hoverId: null,
   mouse: {x:0, y:0},
@@ -288,7 +298,13 @@ const state = {
 
 const nodeById = id => state.nodes.find(n => n.id === id);
 const selNode  = () => state.selectedId ? nodeById(state.selectedId) : null;
-const playerLevel = () => state.nodes.reduce((s, n) => s + n.points, 0);
+// 玩家等级与天赋点是独立资源：升级按钮/送天赋按钮是唯一来源，加点不改变等级
+const playerLevel = () => state.playerLevel;
+// 升该节点下一点所需的玩家等级（跳级要求 = 升下一级需跳过 skip 个等级，即步进 skip+1；0=无跳级）
+function nextLevelReq(n){
+  const step = n.skip > 0 ? n.skip + 1 : 0;
+  return n.reqLevel + n.points * step;
+}
 
 function uniqueId(base){
   let i = 1;
@@ -296,16 +312,18 @@ function uniqueId(base){
   return base + '_' + i;
 }
 
-// 加点规则：等级匹配 + 前置至少 1 点（除此之外没有任何限制）
+// 加点规则：等级匹配（含跳级要求）+ 前置至少 1 点（除此之外没有任何限制）
 function canPick(n){
   const lv = playerLevel();
-  if (lv < n.reqLevel) return false;
+  if (lv < nextLevelReq(n)) return false;
   return n.reqSkills.every(id => (nodeById(id)?.points ?? 0) >= 1);
 }
 function blockReason(n){
   if (n.points >= n.maxLevel) return '已达到最大等级';
+  if (state.talentPoints <= 0) return '天赋点不足';
   const lv = playerLevel();
-  if (lv < n.reqLevel) return `需求等级 ${n.reqLevel}（当前 ${lv}）`;
+  const need = nextLevelReq(n);
+  if (lv < need) return `需求等级 ${need}（当前 ${lv}）`;
   const unmet = n.reqSkills
     .filter(id => (nodeById(id)?.points ?? 0) < 1)
     .map(id => nodeById(id)?.name ?? id);
@@ -320,10 +338,11 @@ function tryAllocate(n){
     return;
   }
   n.points++;
+  state.talentPoints--;
   refreshAll();
 }
 function removePoint(n){
-  if (n.points > 0){ n.points--; refreshAll(); }
+  if (n.points > 0){ n.points--; state.talentPoints++; refreshAll(); } // 天赋点退回池中
 }
 
 // ================= 控件库 =================
@@ -353,78 +372,28 @@ function spawnNode(preset){
     ...base,
     icon: base.icon || '',
     desc: base.desc || '',
+    shape: 'rect',
+    skip: 0,
     reqSkills: [],
     points: 0,
-    x: Math.round(r.width / 2 + dx),
-    y: Math.round(r.height / 2 + dy),
+    x: snapGrid(r.width / 2 + dx),
+    y: snapGrid(r.height / 2 + dy),
   };
   state.nodes.push(n);
-  snapToRow(n); // 吸附所在行，需求等级随行
   select(n.id);
   refreshAll();
   toast(`已在画布生成「${n.name}」`);
 }
 
-// ================= Canvas 尺寸与行 =================
+// ================= Canvas 尺寸 =================
 function resize(){
   const r = stage.getBoundingClientRect();
   canvas.width  = Math.max(1, Math.round(r.width * DPR));
   canvas.height = Math.max(1, Math.round(r.height * DPR));
   canvas.style.width  = r.width + 'px';
   canvas.style.height = r.height + 'px';
-  buildRows();
-  // 窗口变化后让节点留在原行
-  for (const n of state.nodes){
-    const i = Math.min(state.rowLevels.length - 1, Math.max(0, Math.round((n.y - ROW_H / 2) / ROW_H)));
-    n.y = i * ROW_H + ROW_H / 2;
-  }
 }
 window.addEventListener('resize', resize);
-
-// 行头：每行一个 input 定义该行需求等级；落入该行的节点 reqLevel 随之
-let rowHeadInputs = [];
-function buildRows(){
-  const h = stage.getBoundingClientRect().height;
-  const count = Math.max(1, Math.ceil(h / ROW_H));
-  while (state.rowLevels.length < count) state.rowLevels.push(state.rowLevels.length);
-  state.rowLevels.length = count;
-  rowHeadInputs = [];
-  rowHeadsEl.innerHTML = '';
-  for (let i = 0; i < count; i++){
-    const cell = document.createElement('div');
-    cell.className = 'row-head';
-    cell.style.top = (i * ROW_H) + 'px';
-    cell.style.height = ROW_H + 'px';
-    const tag = document.createElement('span');
-    tag.className = 'lv-tag';
-    tag.textContent = 'Lv';
-    const input = document.createElement('input');
-    input.type = 'number'; input.min = '0'; input.max = '99'; input.step = '1';
-    input.value = state.rowLevels[i];
-    input.title = `第 ${i + 1} 行需求等级（该行节点随之变化）`;
-    input.addEventListener('change', () => setRowLevel(i, input));
-    input.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); input.blur(); } });
-    cell.appendChild(tag); cell.appendChild(input);
-    rowHeadsEl.appendChild(cell);
-    rowHeadInputs.push(input);
-  }
-}
-function syncRowHeads(){
-  rowHeadInputs.forEach((inp, i) => { inp.value = state.rowLevels[i]; });
-}
-function setRowLevel(i, input){
-  const v = clampInt(input.value, 0, 99, state.rowLevels[i]);
-  state.rowLevels[i] = v;
-  input.value = v;
-  for (const n of state.nodes) if (rowIndexOfY(n.y) === i) n.reqLevel = v;
-  refreshAll();
-}
-const rowIndexOfY = y => Math.min(state.rowLevels.length - 1, Math.max(0, Math.floor(y / ROW_H)));
-function snapToRow(n){
-  const i = rowIndexOfY(n.y);
-  n.y = i * ROW_H + ROW_H / 2;
-  n.reqLevel = state.rowLevels[i];
-}
 
 // ================= 图标缓存 =================
 const iconCache = new Map(); // url -> {img, ok, failed}
@@ -464,10 +433,25 @@ function roundRect(x, y, w, h, r){
   ctx.arcTo(x, y, x + w, y, r);
   ctx.closePath();
 }
+// 节点外形路径：circle=内切圆，否则圆角矩形
+function shapePath(shape, x, y, w, h){
+  if (shape === 'circle'){
+    ctx.beginPath();
+    ctx.arc(x + w / 2, y + h / 2, Math.min(w, h) / 2, 0, Math.PI * 2);
+    ctx.closePath();
+  } else {
+    roundRect(x, y, w, h, 10);
+  }
+}
 function edgeToward(n, other){
   const hw = NODE_W / 2 + 4, hh = NODE_H / 2 + 4;
   const dx = other.x - n.x, dy = other.y - n.y;
   if (!dx && !dy) return { x:n.x, y:n.y - hh };
+  if (n.shape === 'circle'){
+    // 圆形：到边缘距离各向同性（hw=hh=半径+4）
+    const len = Math.hypot(dx, dy);
+    return { x: n.x + dx / len * hw, y: n.y + dy / len * hh };
+  }
   const sx = dx ? hw / Math.abs(dx) : Infinity;
   const sy = dy ? hh / Math.abs(dy) : Infinity;
   const s = Math.min(sx, sy);
@@ -516,7 +500,7 @@ function drawNode(n, t){
   // 底板 + 阴影
   ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 4;
   ctx.fillStyle = th.fill;
-  roundRect(x, y, NODE_W, NODE_H, 10); ctx.fill();
+  shapePath(n.shape, x, y, NODE_W, NODE_H); ctx.fill();
   ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
   // 边框（可点亮 / 满级带光晕）
@@ -526,13 +510,13 @@ function drawNode(n, t){
     ctx.shadowColor = th.glowColor; ctx.shadowBlur = th.glow + pulse;
   }
   ctx.strokeStyle = flash ? '#ff5a4e' : th.border;
-  roundRect(x, y, NODE_W, NODE_H, 10); ctx.stroke();
+  shapePath(n.shape, x, y, NODE_W, NODE_H); ctx.stroke();
   ctx.shadowBlur = 0;
 
   // 选中描边
   if (n.id === state.selectedId){
     ctx.lineWidth = 2; ctx.strokeStyle = '#ffe9a8';
-    roundRect(x - 5, y - 5, NODE_W + 10, NODE_H + 10, 13); ctx.stroke();
+    shapePath(n.shape, x - 5, y - 5, NODE_W + 10, NODE_H + 10); ctx.stroke();
   }
 
   // 图标 / 名称（图标缺失时显示名称）
@@ -568,20 +552,13 @@ function draw(t){
   const g = ctx.createLinearGradient(0, 0, 0, h);
   g.addColorStop(0, '#191207'); g.addColorStop(1, '#0b0805');
   ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-  ctx.fillStyle = 'rgba(232,203,138,0.05)';
+  // 背景点阵（即网格吸附参照线，节点中心吸附到点上）
+  ctx.fillStyle = 'rgba(232,203,138,0.09)';
   for (let gx = 22; gx < w; gx += 44)
     for (let gy = 22; gy < h; gy += 44) ctx.fillRect(gx, gy, 1.5, 1.5);
   const v = ctx.createRadialGradient(w/2, h/2, Math.min(w,h)*.35, w/2, h/2, Math.max(w,h)*.75);
   v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.55)');
   ctx.fillStyle = v; ctx.fillRect(0, 0, w, h);
-  // 行分隔线（节点吸附行）
-  ctx.strokeStyle = 'rgba(201,169,89,.12)';
-  ctx.lineWidth = 1; ctx.setLineDash([6, 8]);
-  for (let i = 1; i < state.rowLevels.length; i++){
-    const y = i * ROW_H + 0.5;
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
-  }
-  ctx.setLineDash([]);
   // 箭头（依赖关系）
   for (const n of state.nodes)
     for (const rid of n.reqSkills){
@@ -600,7 +577,10 @@ function mousePos(e){ return { x: e.offsetX, y: e.offsetY }; }
 function hitNode(x, y){
   for (let i = state.nodes.length - 1; i >= 0; i--){
     const n = state.nodes[i];
-    if (Math.abs(x - n.x) <= NODE_W/2 + 3 && Math.abs(y - n.y) <= NODE_H/2 + 3) return n;
+    if (n.shape === 'circle'){
+      const dx = x - n.x, dy = y - n.y;
+      if (dx * dx + dy * dy <= (NODE_W / 2 + 3) ** 2) return n;
+    } else if (Math.abs(x - n.x) <= NODE_W/2 + 3 && Math.abs(y - n.y) <= NODE_H/2 + 3) return n;
   }
   return null;
 }
@@ -631,12 +611,7 @@ canvas.addEventListener('mousemove', e => {
     }
     if (d.moved){
       const n = nodeById(d.id);
-      if (n){
-        n.x = p.x - d.dx; n.y = p.y - d.dy;
-        const lvBefore = n.reqLevel;
-        snapToRow(n); // 吸附行，需求等级随行
-        if (n.reqLevel !== lvBefore) refreshAll(); else refreshJson();
-      }
+      if (n){ n.x = snapGrid(p.x - d.dx); n.y = snapGrid(p.y - d.dy); refreshJson(); }
     }
     return;
   }
@@ -676,12 +651,13 @@ function updateTooltip(p){
   const n = state.hoverId ? nodeById(state.hoverId) : null;
   if (!n){ tooltip.style.display = 'none'; return; }
   const lv = playerLevel();
-  const lvOk = lv >= n.reqLevel;
+  const need = nextLevelReq(n);
+  const lvOk = lv >= need;
   const parts = [];
   parts.push(`<div class="tt-name">${esc(n.name || '未命名')}<span class="tt-id">#${esc(n.id)}</span></div>`);
   if (n.desc) parts.push(`<div class="tt-desc">${esc(n.desc)}</div>`);
   parts.push(`<div class="tt-row">点数 <b style="color:#ffd76b">${n.points} / ${n.maxLevel}</b></div>`);
-  parts.push(`<div class="tt-row">需求等级 <b style="color:${lvOk ? '#9fd78a' : '#ff8d7e'}">${n.reqLevel}</b><span class="dim">（当前 ${lv}）</span></div>`);
+  parts.push(`<div class="tt-row">下一点需求等级 <b style="color:${lvOk ? '#9fd78a' : '#ff8d7e'}">${need}</b><span class="dim">（当前 ${lv}${n.skip > 0 ? ' · 跳级' + n.skip : ''}）</span></div>`);
   if (n.reqSkills.length){
     const items = n.reqSkills.map(id => {
       const s = nodeById(id);
@@ -725,8 +701,10 @@ function refreshInspector(){
   else iconPreview.hidden = true;
   inspName.value = n.name;
   inspDesc.value = n.desc;
+  inspShape.value = n.shape || 'rect';
   inspReqLevel.value = n.reqLevel;
   inspMaxLevel.value = n.maxLevel;
+  inspSkip.value = n.skip || 0;
   const reason = blockReason(n);
   inspPtsVal.textContent = `${n.points} / ${n.maxLevel}`;
   inspAdd.disabled = !!reason;
@@ -795,10 +773,21 @@ inspDesc.addEventListener('input', () => {
   n.desc = inspDesc.value;
   refreshJson();
 });
+inspShape.addEventListener('change', () => {
+  const n = selNode(); if (!n) return;
+  n.shape = inspShape.value === 'circle' ? 'circle' : 'rect';
+  refreshJson();
+});
 function clampInt(v, min, max, dft){
   v = parseInt(v, 10);
   if (isNaN(v)) v = dft;
   return Math.min(max, Math.max(min, v));
+}
+function commitReqLevel(){
+  const n = selNode(); if (!n) return;
+  n.reqLevel = clampInt(inspReqLevel.value, 0, 99, 0);
+  inspReqLevel.value = n.reqLevel;
+  refreshAll();
 }
 function commitMaxLevel(){
   const n = selNode(); if (!n) return;
@@ -807,9 +796,21 @@ function commitMaxLevel(){
   inspMaxLevel.value = n.maxLevel;
   refreshAll();
 }
+inspReqLevel.addEventListener('change', commitReqLevel);
+inspReqLevel.addEventListener('blur', commitReqLevel);
+inspReqLevel.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); inspReqLevel.blur(); } });
 inspMaxLevel.addEventListener('change', commitMaxLevel);
 inspMaxLevel.addEventListener('blur', commitMaxLevel);
 inspMaxLevel.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); inspMaxLevel.blur(); } });
+function commitSkip(){
+  const n = selNode(); if (!n) return;
+  n.skip = clampInt(inspSkip.value, 0, 99, 0);
+  inspSkip.value = n.skip;
+  refreshAll();
+}
+inspSkip.addEventListener('change', commitSkip);
+inspSkip.addEventListener('blur', commitSkip);
+inspSkip.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); inspSkip.blur(); } });
 inspAdd.addEventListener('click', () => { const n = selNode(); if (n) tryAllocate(n); });
 inspSub.addEventListener('click', () => { const n = selNode(); if (n) removePoint(n); });
 inspReqAdd.addEventListener('click', addReq);
@@ -835,21 +836,35 @@ function deleteNode(id){
 }
 inspDelete.addEventListener('click', () => { if (state.selectedId) deleteNode(state.selectedId); });
 
+document.getElementById('btnLevelUp').addEventListener('click', () => {
+  state.playerLevel++;
+  state.talentPoints++;
+  refreshAll();
+  toast(`升到 ${state.playerLevel} 级，获得 1 天赋点`);
+});
+document.getElementById('btnGrant').addEventListener('click', () => {
+  state.talentPoints++;
+  refreshAll();
+  toast('完成特殊任务，获得 1 天赋点');
+});
 document.getElementById('btnReset').addEventListener('click', () => {
   state.nodes.forEach(n => n.points = 0);
+  state.playerLevel = 1;
+  state.talentPoints = 1;
   refreshAll();
-  toast('已重置所有技能点');
+  toast('已重置：等级 1 / 天赋点 1');
 });
 
 // ================= 数据面板 =================
 function exportData(){
   return {
     version: 1,
-    rowLevels: [...state.rowLevels],
-    playerLevel: playerLevel(),
+    playerLevel: state.playerLevel,
+    talentPoints: state.talentPoints,
     nodes: state.nodes.map(n => ({
       id: n.id, icon: n.icon, name: n.name, desc: n.desc,
-      reqLevel: n.reqLevel, maxLevel: n.maxLevel,
+      shape: n.shape || 'rect',
+      reqLevel: n.reqLevel, maxLevel: n.maxLevel, skip: n.skip || 0,
       reqSkills: [...n.reqSkills],
       x: Math.round(n.x), y: Math.round(n.y), points: n.points,
     })),
@@ -857,7 +872,8 @@ function exportData(){
 }
 function refreshJson(){ jsonView.value = JSON.stringify(exportData(), null, 2); }
 function refreshHud(){
-  hudLevel.textContent = playerLevel();
+  hudLevel.textContent = state.playerLevel;
+  hudPts.textContent = state.talentPoints;
   hudLit.textContent = state.nodes.filter(n => n.points > 0).length;
   hudTotal.textContent = state.nodes.length;
 }
@@ -911,11 +927,13 @@ function importData(text){
       name: String(raw.name ?? '未命名'),
       icon: String(raw.icon ?? ''),
       desc: String(raw.desc ?? ''),
+      shape: raw.shape === 'circle' ? 'circle' : 'rect',
       reqLevel: clampInt(raw.reqLevel, 0, 99, 0),
       maxLevel: clampInt(raw.maxLevel, 1, 99, 1),
+      skip: clampInt(raw.skip, 0, 99, 0),
       reqSkills: [...new Set(req)],
-      x: Number.isFinite(+raw.x) ? +raw.x : r.width / 2 + ((i % 3) - 1) * 150,
-      y: Number.isFinite(+raw.y) ? +raw.y : r.height / 2 + (Math.floor(i / 3) - 1) * 130,
+      x: snapGrid(Number.isFinite(+raw.x) ? +raw.x : r.width / 2 + ((i % 3) - 1) * 150),
+      y: snapGrid(Number.isFinite(+raw.y) ? +raw.y : r.height / 2 + (Math.floor(i / 3) - 1) * 130),
       points: Math.max(0, clampInt(raw.points, 0, 999, 0)),
     };
     n.points = Math.min(n.points, n.maxLevel);
@@ -924,15 +942,9 @@ function importData(text){
   // 丢弃指向不存在节点（或自身）的前置引用
   for (const n of out)
     n.reqSkills = n.reqSkills.filter(id => id !== n.id && out.some(m => m.id === id));
-  // 行等级：文档若带 rowLevels 则覆盖默认行号
-  if (Array.isArray(obj.rowLevels)){
-    obj.rowLevels.slice(0, state.rowLevels.length).forEach((v, i) => {
-      state.rowLevels[i] = clampInt(v, 0, 99, state.rowLevels[i]);
-    });
-    syncRowHeads();
-  }
-  // 节点吸附所在行，需求等级由行决定
-  for (const n of out) snapToRow(n);
+  // 玩家等级与天赋点池（旧文档缺失时按初始值）
+  state.playerLevel = clampInt(obj.playerLevel, 1, 999, 1);
+  state.talentPoints = Math.max(0, clampInt(obj.talentPoints, 0, 999, 1));
   state.nodes = out;
   state.selectedId = null;
   state.spawnCount = out.length;
@@ -943,41 +955,23 @@ function importData(text){
 // ================= 演示数据 =================
 function seedDemo(){
   const r = stage.getBoundingClientRect();
-  const cx = r.width / 2;
-  const R = state.rowLevels.length;
-  // 演示占用前 4 行：需求等级 0 / 2 / 4 / 6（行数不足时收敛到可用行）
-  [0, 2, 4, 6].forEach((lv, i) => { if (i < R) state.rowLevels[i] = lv; });
-  syncRowHeads();
-  const rowY = i => Math.min(R - 1, i) * ROW_H + ROW_H / 2;
-  const lvOf = i => state.rowLevels[Math.min(R - 1, i)];
+  const cx = r.width / 2, cy = r.height / 2;
   const demo = [
-    { id:'fire_slash',   name:'火焰斩',   desc:'挥出燃烧的斩击。',             row:0, x:cx-260 },
-    { id:'frost_nova',   name:'冰霜新星', desc:'以自身为中心释放冰爆。',       row:0, x:cx+250 },
-    { id:'fire_blast',   name:'烈焰冲击', desc:'向前方释放火焰冲击波。',       row:1, x:cx-140 },
-    { id:'fire_mastery', name:'火焰强化', desc:'被动：提升全部火焰伤害。',     row:1, x:cx-10 },
-    { id:'ice_armor',    name:'寒冰护甲', desc:'被动：受击时冻结攻击者。',     row:2, x:cx+250 },
-    { id:'meteor',       name:'陨石术',   desc:'召唤陨石轰击敌人。',           row:3, x:cx-70 },
+    { id:'fire_slash',   name:'火焰斩',   desc:'挥出燃烧的斩击。',             reqLevel:0, maxLevel:5, reqSkills:[],                 x:cx-260, y:cy-20 },
+    { id:'fire_blast',   name:'烈焰冲击', desc:'向前方释放火焰冲击波。',       reqLevel:2, maxLevel:5, reqSkills:['fire_slash'],     x:cx-90,  y:cy-120 },
+    { id:'fire_mastery', name:'火焰强化', desc:'被动：提升全部火焰伤害。',     reqLevel:1, maxLevel:10, reqSkills:['fire_slash'], skip:1, x:cx-90,  y:cy+80 },
+    { id:'meteor',       name:'陨石术',   desc:'召唤陨石轰击敌人。',           reqLevel:6, maxLevel:1, reqSkills:['fire_blast','fire_mastery'], x:cx+90, y:cy-20 },
+    { id:'frost_nova',   name:'冰霜新星', desc:'以自身为中心释放冰爆。',       reqLevel:0, maxLevel:5, reqSkills:[],                 x:cx+150, y:cy-150 },
+    { id:'ice_armor',    name:'寒冰护甲', desc:'被动：受击时冻结攻击者。',     reqLevel:3, maxLevel:5, reqSkills:['frost_nova'],     x:cx+150, y:cy+30 },
   ];
-  const reqMap = {
-    fire_blast:   ['fire_slash'],
-    fire_mastery: ['fire_slash'],
-    ice_armor:    ['frost_nova'],
-    meteor:       ['fire_blast', 'fire_mastery'],
-  };
-  const maxMap = { fire_slash:5, frost_nova:5, fire_blast:5, fire_mastery:10, ice_armor:5, meteor:1 };
-  state.nodes = demo.map(d => ({
-    id: d.id, name: d.name, icon: '', desc: d.desc,
-    reqLevel: lvOf(d.row), maxLevel: maxMap[d.id],
-    reqSkills: [...(reqMap[d.id] || [])],
-    x: Math.round(d.x), y: rowY(d.row), points: 0,
-  }));
+  state.nodes = demo.map(n => ({ ...n, icon:'', points:0, shape:'rect', skip: n.skip || 0, x: snapGrid(n.x), y: snapGrid(n.y) }));
   state.spawnCount = demo.length;
 }
 
 // ================= 启动 =================
 buildLibrary();
-resize();
 seedDemo();
+resize();
 refreshAll();
 })();
 </script>

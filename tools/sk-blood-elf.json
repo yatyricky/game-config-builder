@@ -1,0 +1,332 @@
+{
+  "version": 1,
+  "playerLevel": 0,
+  "nodes": [
+    {
+      "id": "arcane_shock",
+      "icon": "",
+      "name": "奥术冲击",
+      "desc": "mag dd +, debuff: hit rate--\n",
+      "shape": "rect",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 506,
+      "y": 198,
+      "points": 0
+    },
+    {
+      "id": "exposed_weakness",
+      "icon": "",
+      "name": "暴露破绽",
+      "desc": "enemy miss: phyx amp",
+      "shape": "circle",
+      "reqLevel": 3,
+      "maxLevel": 3,
+      "reqSkills": [
+        "arcane_shock"
+      ],
+      "x": 638,
+      "y": 374,
+      "points": 0
+    },
+    {
+      "id": "arcane_pursuit",
+      "icon": "",
+      "name": "奥术追击",
+      "desc": "same target dmg++\n",
+      "shape": "circle",
+      "reqLevel": 3,
+      "maxLevel": 3,
+      "reqSkills": [
+        "arcane_shock"
+      ],
+      "x": 506,
+      "y": 374,
+      "points": 0
+    },
+    {
+      "id": "arcane_erosion",
+      "icon": "",
+      "name": "奥术侵蚀",
+      "desc": "debuff dur +\n",
+      "shape": "circle",
+      "reqLevel": 3,
+      "maxLevel": 3,
+      "reqSkills": [
+        "arcane_shock"
+      ],
+      "x": 374,
+      "y": 374,
+      "points": 0
+    },
+    {
+      "id": "shield_block",
+      "icon": "",
+      "name": "盾牌格挡",
+      "desc": "block rate +, block points +\n",
+      "shape": "rect",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 902,
+      "y": 198,
+      "points": 0
+    },
+    {
+      "id": "spell_block",
+      "icon": "",
+      "name": "法术格挡",
+      "desc": "block works on spells\n",
+      "shape": "circle",
+      "reqLevel": 3,
+      "maxLevel": 3,
+      "reqSkills": [
+        "shield_block"
+      ],
+      "x": 1034,
+      "y": 374,
+      "points": 0
+    },
+    {
+      "id": "sun_flame_strike",
+      "icon": "",
+      "name": "阳炎冲击",
+      "desc": "ground dot, stackable\n",
+      "shape": "rect",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 1298,
+      "y": 198,
+      "points": 0
+    },
+    {
+      "id": "enhanced_shield_block",
+      "icon": "",
+      "name": "强化盾牌格挡",
+      "desc": "block rate+, block points+\n",
+      "shape": "circle",
+      "reqLevel": 3,
+      "maxLevel": 3,
+      "reqSkills": [
+        "shield_block"
+      ],
+      "x": 770,
+      "y": 374,
+      "points": 0
+    },
+    {
+      "id": "avenging_missile",
+      "icon": "",
+      "name": "复仇飞弹",
+      "desc": "taking spell damage: fires arcane missile\n",
+      "shape": "circle",
+      "reqLevel": 5,
+      "maxLevel": 3,
+      "reqSkills": [
+        "spell_block"
+      ],
+      "x": 902,
+      "y": 506,
+      "points": 0
+    },
+    {
+      "id": "perma_spell_block",
+      "icon": "",
+      "name": "永久法术格挡",
+      "desc": "perma effect\n",
+      "shape": "circle",
+      "reqLevel": 5,
+      "maxLevel": 1,
+      "reqSkills": [
+        "spell_block"
+      ],
+      "x": 1034,
+      "y": 506,
+      "points": 0
+    },
+    {
+      "id": "arcane_torrent",
+      "icon": "",
+      "name": "奥术洪流",
+      "desc": "arcane torrent\n",
+      "shape": "circle",
+      "reqLevel": 3,
+      "maxLevel": 3,
+      "reqSkills": [
+        "sun_flame_strike"
+      ],
+      "x": 1298,
+      "y": 374,
+      "points": 0
+    },
+    {
+      "id": "mana_steal",
+      "icon": "",
+      "name": "法力窃取",
+      "desc": "mana steal\n",
+      "shape": "circle",
+      "reqLevel": 5,
+      "maxLevel": 1,
+      "reqSkills": [
+        "arcane_torrent"
+      ],
+      "x": 1298,
+      "y": 506,
+      "points": 0
+    },
+    {
+      "id": "skill_1",
+      "icon": "",
+      "name": "法术加速",
+      "desc": "arcane shock or shield block cd-1\n",
+      "shape": "circle",
+      "reqLevel": 3,
+      "maxLevel": 3,
+      "reqSkills": [
+        "sun_flame_strike"
+      ],
+      "x": 1430,
+      "y": 374,
+      "points": 0
+    },
+    {
+      "id": "scorching_shield",
+      "icon": "",
+      "name": "灼热盾牌",
+      "desc": "applies dot: being blocked triggers dot\n",
+      "shape": "circle",
+      "reqLevel": 5,
+      "maxLevel": 3,
+      "reqSkills": [
+        "sun_flame_strike",
+        "spell_block"
+      ],
+      "x": 1166,
+      "y": 506,
+      "points": 0
+    },
+    {
+      "id": "shield_of_sindorei",
+      "icon": "",
+      "name": "辛多雷之盾",
+      "desc": "all dr%, shield block reflects block pts, thorns effect synergy\n",
+      "shape": "rect",
+      "reqLevel": 6,
+      "maxLevel": 3,
+      "reqSkills": [],
+      "x": 1694,
+      "y": 198,
+      "points": 0
+    },
+    {
+      "id": "absorption_shield",
+      "icon": "",
+      "name": "吸收护盾",
+      "desc": "absorption, then explosion \n",
+      "shape": "circle",
+      "reqLevel": 8,
+      "maxLevel": 2,
+      "reqSkills": [
+        "shield_of_sindorei"
+      ],
+      "x": 1562,
+      "y": 374,
+      "points": 0
+    },
+    {
+      "id": "healing_shield",
+      "icon": "",
+      "name": "治疗之盾",
+      "desc": "life rep\n",
+      "shape": "circle",
+      "reqLevel": 8,
+      "maxLevel": 2,
+      "reqSkills": [
+        "shield_of_sindorei"
+      ],
+      "x": 1826,
+      "y": 374,
+      "points": 0
+    },
+    {
+      "id": "skill_2",
+      "icon": "",
+      "name": "法术汲取",
+      "desc": "Mag leech\n",
+      "shape": "circle",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 1166,
+      "y": 682,
+      "points": 0
+    },
+    {
+      "id": "skill_3",
+      "icon": "",
+      "name": "物理增伤",
+      "desc": "Phyx amp\n",
+      "shape": "circle",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 1430,
+      "y": 682,
+      "points": 0
+    },
+    {
+      "id": "skill_4",
+      "icon": "",
+      "name": "法术增伤",
+      "desc": "Mag amp\n",
+      "shape": "circle",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 1298,
+      "y": 682,
+      "points": 0
+    },
+    {
+      "id": "skill_5",
+      "icon": "",
+      "name": "力量即智慧",
+      "desc": "Strength also increases sp\n",
+      "shape": "circle",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 902,
+      "y": 682,
+      "points": 0
+    },
+    {
+      "id": "skill_6",
+      "icon": "",
+      "name": "鲜血法力",
+      "desc": "Dmg taken before dr rep mana\n",
+      "shape": "circle",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 770,
+      "y": 682,
+      "points": 0
+    },
+    {
+      "id": "skill_7",
+      "icon": "",
+      "name": "治疗亲和",
+      "desc": "Heal taken amp \n",
+      "shape": "circle",
+      "reqLevel": 0,
+      "maxLevel": 5,
+      "reqSkills": [],
+      "x": 1034,
+      "y": 682,
+      "points": 0
+    }
+  ]
+}
