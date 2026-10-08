@@ -257,7 +257,7 @@ export function App() {
       } else if (key === 'e') {
         e.preventDefault()
         h.exportCsv()
-      } else if (key === 'n') {
+      } else if (key === 'm') {
         e.preventDefault()
         h.newTable()
       } else if (/^[1-9]$/.test(e.key)) {

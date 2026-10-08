@@ -52,7 +52,7 @@ export function TabBar({ tables, selected, onSelect, onNew }: TabBarProps) {
         {tables.map((name, i) => tab(name, i + 2, name))}
       </div>
       <button className="tab-new" onClick={onNew}>
-        {wrap('+新建表格', 'N')}
+        {wrap('+新建表格', 'M')}
       </button>
     </div>
   )

@@ -263,5 +263,6 @@ body,
 }
 
 .show-badges .tab-scroll {
+  margin-top: -26px;
   padding-top: 26px;
 }
