@@ -1,8 +1,17 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 
-/** 按住 Ctrl 时「+新建表格」上方显示快捷键徽标 */
-export function TabBar({ tables, selected, onSelect, onNew }: { tables: string[]; selected: string; onSelect: (tab: string) => void; onNew: () => void }) {
+interface TabBarProps {
+  tables: string[]
+  /** 'schemas' 或表名 */
+  selected: string
+  onSelect: (tab: string) => void
+  onNew: () => void
+}
+
+/** spec 底栏：Schemas(第 1 个 sheet) | 各表页签（横向 scroll view，滚动条 4px）| [+新建表格] 冻结最右。
+ * 按住 Ctrl：每个页签上方显示快捷键数字徽记（Ctrl+1=Schemas、Ctrl+2..=各表），+新建显示 N。 */
+export function TabBar({ tables, selected, onSelect, onNew }: TabBarProps) {
   const [ctrlHeld, setCtrlHeld] = useState(false)
   useEffect(() => {
     const down = (e: KeyboardEvent): void => {
@@ -29,20 +38,21 @@ export function TabBar({ tables, selected, onSelect, onNew }: { tables: string[]
     </span>
   )
 
+  const tab = (key: string, index: number, label: ReactNode): ReactNode => (
+    <button key={key} className={`tab${selected === key ? ' active' : ''}`} onClick={() => onSelect(key)}>
+      {ctrlHeld && <span className="kb-badge">{index}</span>}
+      {label}
+    </button>
+  )
+
   return (
-    <div className="tabbar">
+    <div className={`tabbar${ctrlHeld ? ' show-badges' : ''}`}>
       <div className="tab-scroll">
-        <button className={`tab${selected === 'schemas' ? ' active' : ''}`} onClick={() => onSelect('schemas')}>
-          Schemas
-        </button>
-        {tables.map(name => (
-          <button key={name} className={`tab${selected === name ? ' active' : ''}`} onClick={() => onSelect(name)}>
-            {name}
-          </button>
-        ))}
+        {tab('schemas', 1, 'Schemas')}
+        {tables.map((name, i) => tab(name, i + 2, name))}
       </div>
       <button className="tab-new" onClick={onNew}>
-        {wrap('+新建表格', 'Ctrl+N')}
+        {wrap('+新建表格', 'N')}
       </button>
     </div>
   )

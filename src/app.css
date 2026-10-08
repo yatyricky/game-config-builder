@@ -256,3 +256,12 @@ body,
 .kb-badge.below {
   top: calc(100% + 6px);
 }
+
+/* 按住 Ctrl：页签上方让出徽标空间（徽标绝对定位于各页签上方） */
+.tab {
+  position: relative;
+}
+
+.show-badges .tab-scroll {
+  padding-top: 26px;
+}

@@ -68,9 +68,9 @@ export function TopBar({ current, recents, isDirty, onOpen, onReopen, onSave, on
           </option>
         ))}
       </select>
-      <HotButton label="打开" hotkey="Ctrl+O" onClick={onOpen} />
-      <HotButton label={isDirty ? '保存 *' : '保存'} hotkey="Ctrl+S" onClick={onSave} disabled={!current} />
-      <HotButton label="导出" hotkey="Ctrl+E" onClick={onExport} disabled={!current} />
+      <HotButton label="打开" hotkey="O" onClick={onOpen} />
+      <HotButton label={isDirty ? '保存 *' : '保存'} hotkey="S" onClick={onSave} disabled={!current} />
+      <HotButton label="导出" hotkey="E" onClick={onExport} disabled={!current} />
     </div>
   )
 }
