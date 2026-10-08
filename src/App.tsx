@@ -5,11 +5,15 @@ import { fsaSource, fsaWriteFile } from './data/dirSource.ts'
 import { applyCellEdit } from './data/edit.ts'
 import { compactRows, tableToJSONL, validateRows } from './data/save.ts'
 import type { PasteWrite } from './data/clipboard.ts'
-import { getHandle, loadRecentNames, putHandle, rememberRecentName } from './data/recents.ts'
+import { getHandleById, loadRecentEntries, putHandle, rememberRecent } from './data/recents.ts'
+import type { RecentEntry } from './data/recents.ts'
 import { Grid } from './grid/Grid.tsx'
 import { TopBar } from './ui/TopBar.tsx'
 import { TabBar } from './ui/TabBar.tsx'
+import { Notices } from './ui/Notices.tsx'
+import type { NoticeItem } from './ui/Notices.tsx'
 import type { TableRow } from './data/types.ts'
+import './theme.css'
 import './app.css'
 
 interface PickerWindow {
@@ -29,22 +33,23 @@ function requestReadWrite(handle: FileSystemDirectoryHandle): Promise<Permission
 
 export function App() {
   const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null)
+  const [current, setCurrent] = useState<RecentEntry | null>(null)
   const [result, setResult] = useState<LoadResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [saveError, setSaveError] = useState<string | null>(null)
-  const [pasteError, setPasteError] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
-  const [recents, setRecents] = useState<string[]>(() => loadRecentNames())
+  const [recents, setRecents] = useState<RecentEntry[]>(() => loadRecentEntries())
   const [selectedTab, setSelectedTab] = useState<string>('schemas')
   const [dirty, setDirty] = useState<Record<string, true>>({})
+  const [notices, setNotices] = useState<NoticeItem[]>([])
   const saveTimer = useRef<number | null>(null)
 
-  // doSave 经定时器触发，用 ref 取最新状态避免闭包过期
   const stateRef = useRef({ dirHandle, result, dirty })
   stateRef.current = { dirHandle, result, dirty }
 
-  /** 自动保存（裁决：防抖 1s；必填缺失阻止保存；空记录压缩并回写前端；写盘经 FSA） */
-  const doSave = async (): Promise<void> => {
+  const pushNotice = (kind: NoticeItem['kind'], text: string): void => {
+    setNotices(xs => [{ id: crypto.randomUUID(), kind, text }, ...xs])
+  }
+
+  /** 保存（裁决：自动保存静默吞错；手动保存失败弹通知）。silent=true 供防抖自动路径 */
+  const doSave = async (silent: boolean): Promise<void> => {
     const { dirHandle: dh, result: r, dirty: d } = stateRef.current
     if (!dh || !r) return
     const names = Object.keys(d)
@@ -56,9 +61,10 @@ export function App() {
       if (!def || def.kind !== 'struct' || !table) continue
       const issues = validateRows(def, table.rows)
       if (issues.length > 0) {
+        if (silent) return
         const first = issues[0]
         const more = issues.length > 1 ? ` 等 ${issues.length} 行` : ''
-        setSaveError(`无法保存「${name}」第 ${first.row} 行缺少必填：${first.missing.join('、')}${more}`)
+        pushNotice('error', `无法保存「${name}」第 ${first.row} 行缺少必填：${first.missing.join('、')}${more}`)
         return
       }
     }
@@ -87,9 +93,8 @@ export function App() {
         for (const name of names) delete next[name]
         return next
       })
-      setSaveError(null)
     } catch (e) {
-      setSaveError(`写盘失败：${String(e)}`)
+      if (!silent) pushNotice('error', `写盘失败：${String(e)}`)
     }
   }
 
@@ -98,20 +103,20 @@ export function App() {
     if (saveTimer.current !== null) window.clearTimeout(saveTimer.current)
     saveTimer.current = window.setTimeout(() => {
       saveTimer.current = null
-      void doSave()
+      void doSave(true)
     }, AUTOSAVE_DEBOUNCE_MS)
   }
 
-  /** 保存按钮 = flush 防抖立即写盘 */
+  /** 保存按钮 / Ctrl+S：flush 防抖立即写（手动路径，失败弹通知） */
   const saveNow = (): void => {
     if (saveTimer.current !== null) {
       window.clearTimeout(saveTimer.current)
       saveTimer.current = null
     }
-    void doSave()
+    void doSave(false)
   }
 
-  // 裁决：有未保存改动时刷新/关闭弹警告
+  // 有未保存改动时刷新/关闭弹警告
   useEffect(() => {
     if (Object.keys(dirty).length === 0) return
     const handler = (e: BeforeUnloadEvent): void => {
@@ -122,53 +127,55 @@ export function App() {
     return () => window.removeEventListener('beforeunload', handler)
   }, [dirty])
 
-  const adoptHandle = async (handle: FileSystemDirectoryHandle): Promise<void> => {
+  const adoptHandle = async (handle: FileSystemDirectoryHandle, id: string, name: string): Promise<void> => {
     try {
       const r = await loadProject(fsaSource(handle))
       setResult(r)
       setDirHandle(handle)
+      setCurrent({ id, name })
       setSelectedTab(r.project.tables[0]?.name ?? 'schemas')
       setDirty({})
-      setSaveError(null)
-      setPasteError(null)
-      setMessage(null)
-      setError(r.issues.length > 0 ? r.issues.map(i => `${i.file}${i.at ? ` ${i.at}` : ''}: ${i.message}`).join('\n') : null)
-      setRecents(rememberRecentName(handle.name))
-      await putHandle(handle.name, handle)
+      // 打开时间倒排：置顶并回写
+      setRecents(rememberRecent(id, name))
+      await putHandle(id, handle)
+      if (r.issues.length > 0) {
+        pushNotice('error', r.issues.map(i => `${i.file}${i.at ? ` ${i.at}` : ''}: ${i.message}`).join('\n'))
+      }
     } catch (e) {
-      setError(String(e))
+      pushNotice('error', String(e))
     }
   }
 
   const open = async (): Promise<void> => {
     const picker = (window as unknown as PickerWindow).showDirectoryPicker
     if (!picker) {
-      setError('此浏览器不支持 File System Access API')
+      pushNotice('error', '此浏览器不支持 File System Access API')
       return
     }
     try {
       const handle = await picker({ mode: 'readwrite' })
-      await adoptHandle(handle)
+      await adoptHandle(handle, crypto.randomUUID(), handle.name)
     } catch (e) {
-      setError(String(e))
+      pushNotice('error', String(e))
     }
   }
 
-  /** 近期工程一键重开：句柄出 IndexedDB + 补一次授权 */
-  const reopen = async (name: string): Promise<void> => {
+  /** 近期工程一键重开：句柄出 IndexedDB + 补一次授权；成功即置顶 */
+  const reopen = async (id: string): Promise<void> => {
+    const entry = recents.find(r => r.id === id)
     try {
-      const handle = await getHandle(name)
+      const handle = await getHandleById(id)
       if (!handle) {
-        setError(`未找到「${name}」的目录句柄，请用「打开」重新选择`)
+        pushNotice('error', `未找到「${entry?.name ?? id}」的目录句柄，请用「打开」重新选择`)
         return
       }
       if ((await requestReadWrite(handle)) !== 'granted') {
-        setError(`「${name}」的访问权限被拒绝`)
+        pushNotice('error', `「${entry?.name ?? id}」的访问权限被拒绝`)
         return
       }
-      await adoptHandle(handle)
+      await adoptHandle(handle, id, entry?.name ?? handle.name)
     } catch (e) {
-      setError(String(e))
+      pushNotice('error', String(e))
     }
   }
 
@@ -188,7 +195,6 @@ export function App() {
     markDirty(tableName)
   }
 
-  /** M6：粘贴批量写入（同一写时复制通路） */
   const handleApplyWrites = (tableName: string, writes: PasteWrite[]): void => {
     const apply = (rows: TableRow[]): TableRow[] =>
       writes.reduce((acc, w) => applyCellEdit(acc, w.row, w.fieldName, w.value), rows)
@@ -205,25 +211,73 @@ export function App() {
     markDirty(tableName)
   }
 
+  // 全局快捷键（ref 取最新回调）
+  const hotkeysRef = useRef({
+    save: saveNow,
+    open: (): void => void open(),
+    exportCsv: (): void => pushNotice('info', '导出：NotImplemented（spec 待定义）'),
+    newTable: (): void => pushNotice('info', '新建表格：NotImplemented（依赖 schema 编辑，spec 待定）'),
+    selectSheet: (n: number): void => {
+      const r = stateRef.current.result
+      const name = r?.project.tables[n - 1]?.name
+      if (name) setSelectedTab(name)
+    },
+  })
+  hotkeysRef.current = {
+    save: saveNow,
+    open: (): void => void open(),
+    exportCsv: (): void => pushNotice('info', '导出：NotImplemented（spec 待定义）'),
+    newTable: (): void => pushNotice('info', '新建表格：NotImplemented（依赖 schema 编辑，spec 待定）'),
+    selectSheet: (n: number): void => {
+      const r = stateRef.current.result
+      const name = r?.project.tables[n - 1]?.name
+      if (name) setSelectedTab(name)
+    },
+  }
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return
+      const h = hotkeysRef.current
+      const key = e.key.toLowerCase()
+      if (key === 's') {
+        e.preventDefault()
+        h.save()
+      } else if (key === 'o') {
+        e.preventDefault()
+        h.open()
+      } else if (key === 'e') {
+        e.preventDefault()
+        h.exportCsv()
+      } else if (key === 'n') {
+        e.preventDefault()
+        h.newTable()
+      } else if (/^[1-9]$/.test(e.key)) {
+        e.preventDefault()
+        h.selectSheet(Number(e.key))
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const table = result?.project.tables.find(t => t.name === selectedTab)
   const def = result?.project.types.get(selectedTab)
   const structDef = def?.kind === 'struct' ? def : null
   const projectOpen = dirHandle !== null && result !== null
+  const isDirty = Object.keys(dirty).length > 0
 
   return (
     <main id="app">
       <TopBar
-        projectName={dirHandle?.name ?? null}
+        current={current}
         recents={recents}
+        isDirty={isDirty}
         onOpen={open}
-        onReopen={reopen}
+        onReopen={id => void reopen(id)}
         onSave={saveNow}
-        onExport={() => setMessage('导出：NotImplemented（spec 待定义）')}
+        onExport={() => pushNotice('info', '导出：NotImplemented（spec 待定义）')}
       />
-      {error && <p className="error">{error}</p>}
-      {saveError && <p className="error">{saveError}</p>}
-      {pasteError && <p className="error">{pasteError}</p>}
-      {message && <p className="notice">{message}</p>}
       <div className="content">
         {projectOpen ? (
           selectedTab !== 'schemas' && table && structDef ? (
@@ -234,7 +288,7 @@ export function App() {
                 def={structDef}
                 onEditCell={(row, fieldName, value) => handleEditCell(table.name, row, fieldName, value)}
                 onApplyWrites={writes => handleApplyWrites(table.name, writes)}
-                onPasteError={setPasteError}
+                onPasteError={msg => pushNotice('error', msg)}
               />
             </div>
           ) : (
@@ -251,9 +305,10 @@ export function App() {
           tables={result.project.tables.map(t => t.name)}
           selected={selectedTab}
           onSelect={setSelectedTab}
-          onNew={() => setMessage('新建表格：NotImplemented（依赖 schema 编辑，spec 待定）')}
+          onNew={() => pushNotice('info', '新建表格：NotImplemented（依赖 schema 编辑，spec 待定）')}
         />
       )}
+      <Notices items={notices} onClose={id => setNotices(xs => xs.filter(x => x.id !== id))} />
     </main>
   )
 }

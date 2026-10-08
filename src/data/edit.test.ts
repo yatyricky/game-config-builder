@@ -58,3 +58,10 @@ test('必填缺失判定，undefined/null/空串', () => {
   assert.equal(missingRequired(def, nullId).length, 1)
   assert.equal(missingRequired(def, nullId)[0].name, 'ID')
 })
+
+test('必填缺失：trim 空串算缺失', () => {
+  const blankId: TableRow = { ID: '   ', Name: 'x' }
+  const issues = missingRequired(def, blankId)
+  assert.equal(issues.length, 1)
+  assert.equal(issues[0].name, 'ID')
+})

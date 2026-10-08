@@ -19,7 +19,7 @@ interface GridProps {
   /** 粘贴批量写入 */
   onApplyWrites?: (writes: PasteWrite[]) => void
   /** 粘贴失败提示（null=清除） */
-  onPasteError?: (message: string | null) => void
+  onPasteError?: (message: string) => void
 }
 
 interface DragState {
@@ -128,7 +128,6 @@ export function Grid({ table, def, onEditCell, onApplyWrites, onPasteError }: Gr
   // ---- 剪切板（应用内值快照；写盘/系统剪切板集成属 M7+） ----
   const copySelection = (): void => {
     setClipboard({ content: buildClipboard(table.rows, def, selection), source: selection })
-    onPasteError?.(null)
   }
 
   const pasteAtSelection = (): void => {
@@ -139,7 +138,6 @@ export function Grid({ table, def, onEditCell, onApplyWrites, onPasteError }: Gr
       return
     }
     onApplyWrites?.(plan.writes)
-    onPasteError?.(null)
   }
 
   // ---- 键盘：导航态（viewport 级） ----
@@ -156,6 +154,18 @@ export function Grid({ table, def, onEditCell, onApplyWrites, onPasteError }: Gr
         pasteAtSelection()
         return
       }
+    }
+    // Delete：清除选区内全部单元格内容（写 undefined，走批量写入通路→防抖保存）
+    if (e.key === 'Delete' && !editing) {
+      e.preventDefault()
+      const writes: PasteWrite[] = []
+      for (let r = selection.rowStart; r <= selection.rowEnd; r++) {
+        for (let c = selection.colStart; c <= selection.colEnd; c++) {
+          writes.push({ row: r, fieldName: def.fields[c].name, value: undefined })
+        }
+      }
+      if (writes.length > 0) onApplyWrites?.(writes)
+      return
     }
     if (e.key === 'F2') {
       e.preventDefault()

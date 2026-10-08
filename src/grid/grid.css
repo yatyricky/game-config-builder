@@ -1,10 +1,11 @@
-/* 行高/行头宽须与 layout.ts 的 ROW_HEIGHT / ROW_HEADER_WIDTH 一致 */
+/* 网格样式——设计 token 见 theme.css；行高/行头宽须与 layout.ts 的 ROW_HEIGHT / ROW_HEADER_WIDTH 一致 */
 .grid-viewport {
   position: relative;
   overflow: auto;
   height: 100%;
-  background: #fff;
+  background: var(--color-canvas);
   user-select: none;
+  outline: none;
 }
 
 .grid-header {
@@ -28,24 +29,24 @@
 .cell {
   flex: none;
   box-sizing: border-box;
-  padding: 0 6px;
-  border-right: 1px solid #e3e3e3;
-  border-bottom: 1px solid #e3e3e3;
+  padding: 0 var(--space-2);
+  border-right: 1px solid var(--color-border-muted);
+  border-bottom: 1px solid var(--color-border-muted);
   line-height: 23px;
-  font-size: 13px;
+  font-size: var(--text-sm);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  background: #fff;
+  background: var(--color-canvas);
   cursor: var(--cursor-cell, cell);
 }
 
 .selected {
-  background: #e9e9e9;
+  background: var(--color-inset);
 }
 
 .focused {
-  outline: 2px solid #111;
+  outline: 2px solid var(--color-fg);
   outline-offset: -2px;
   position: relative;
   z-index: 2;
@@ -58,12 +59,11 @@
   outline: none;
   padding: 0;
   font: inherit;
-  font-size: 13px;
-  background: #fff;
+  font-size: var(--text-sm);
+  background: var(--color-canvas);
   box-sizing: border-box;
 }
 
-/* 复制源跑马灯：焦点黑框改虚线套在复制区上（行进蚂蚁动画） */
 .copy-marquee {
   position: absolute;
   z-index: 3;
@@ -77,7 +77,7 @@
   width: calc(100% - 2px);
   height: calc(100% - 2px);
   fill: none;
-  stroke: #111;
+  stroke: var(--color-fg);
   stroke-width: 2;
   stroke-dasharray: 6 4;
   animation: march 0.6s linear infinite;
@@ -93,8 +93,8 @@
   position: sticky;
   left: 0;
   z-index: 1;
-  background: #f7f7f7;
-  color: #666;
+  background: var(--color-subtle);
+  color: var(--color-fg-muted);
   text-align: right;
   cursor: var(--cursor-row, default);
 }
@@ -103,18 +103,18 @@
   position: sticky;
   left: 0;
   z-index: 1;
-  background: #f7f7f7;
+  background: var(--color-subtle);
   cursor: default;
 }
 
 .col-head {
-  background: #f7f7f7;
+  background: var(--color-subtle);
   font-weight: 600;
   cursor: var(--cursor-col, default);
 }
 
 .notimpl {
-  color: #b3b3b3;
+  color: var(--color-fg-muted);
   font-style: italic;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }

@@ -15,65 +15,99 @@ body,
   height: 100%;
 }
 
-/* 顶栏：GCB [路径下拉] [打开] [保存] [导出] */
+/* 顶栏 */
 .topbar {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: center;
-  padding: 6px 8px;
-  border-bottom: 1px solid #ddd;
-  background: #f7f7f7;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-subtle);
 }
 
 .brand {
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
-/* spec：使用足够宽度的下拉菜单展示完整路径（FSA 只暴露目录名） */
+/* 裁决：定宽，文本溢出省略 */
 .path-select {
-  flex: 1;
+  flex: none;
+  width: 320px;
   min-width: 0;
   font: inherit;
-  font-size: 13px;
-  padding: 3px 4px;
+  font-size: var(--text-sm);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-canvas);
+  color: var(--color-fg);
+  text-overflow: ellipsis;
 }
 
-.topbar button {
+.topbar button,
+.hot-wrap button {
   flex: none;
   font: inherit;
-  font-size: 13px;
-  padding: 3px 12px;
+  font-size: var(--text-sm);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-subtle);
+  color: var(--color-fg);
+  cursor: pointer;
 }
 
-.error {
-  color: #c0392b;
-  margin: 0;
-  padding: 4px 8px 0;
-  font-size: 13px;
-  white-space: pre-wrap;
+.topbar button:hover,
+.hot-wrap button:hover {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent);
 }
 
-.notice {
-  color: #666;
-  margin: 0;
-  padding: 4px 8px 0;
-  font-size: 13px;
+.topbar button:disabled,
+.hot-wrap button:disabled {
+  color: var(--color-fg-muted);
+  cursor: default;
+  background: var(--color-subtle);
+  border-color: var(--color-border-muted);
 }
 
+/* 快捷键徽标：按住 Ctrl 时按钮上方悬浮圆角矩形 */
+.hot-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.kb-badge {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1px var(--space-2);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* 内容区 */
 .content {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 8px;
-  gap: 8px;
+  padding: var(--space-2);
+  gap: var(--space-2);
 }
 
 .placeholder {
-  color: #888;
+  color: var(--color-fg-muted);
   margin: auto;
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
 .grid-area {
@@ -84,15 +118,16 @@ body,
 
 .grid-area > .grid-viewport {
   flex: 1;
-  border: 1px solid #d0d0d0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
 }
 
-/* 底栏：Schemas | 表页签（横滚 4px 滚动条）| [+新建表格] 冻结最右 */
+/* 底栏页签 */
 .tabbar {
   display: flex;
   align-items: flex-end;
-  border-top: 1px solid #ddd;
-  background: #f7f7f7;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-subtle);
 }
 
 .tab-scroll {
@@ -100,7 +135,7 @@ body,
   min-width: 0;
   display: flex;
   overflow-x: auto;
-  padding: 4px 8px 0;
+  padding: var(--space-1) var(--space-2) 0;
 }
 
 .tab-scroll::-webkit-scrollbar {
@@ -108,7 +143,8 @@ body,
 }
 
 .tab-scroll::-webkit-scrollbar-thumb {
-  background: #aaa;
+  background: var(--color-border);
+  border-radius: 2px;
 }
 
 .tab-scroll::-webkit-scrollbar-track {
@@ -117,28 +153,100 @@ body,
 
 .tab {
   flex: none;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border-muted);
   border-bottom: none;
-  background: #ececec;
-  padding: 4px 14px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--color-subtle);
+  color: var(--color-fg-muted);
+  padding: var(--space-1) var(--space-3);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 
+.tab:hover {
+  color: var(--color-accent);
+}
+
 .tab.active {
-  background: #fff;
+  background: var(--color-canvas);
+  color: var(--color-fg);
   font-weight: 600;
+  border-color: var(--color-border);
 }
 
 .tab-new {
   flex: none;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border-muted);
   border-bottom: none;
-  border-left: 1px solid #ddd;
-  background: #ececec;
-  padding: 4px 14px;
+  border-left: 1px solid var(--color-border);
+  border-radius: var(--radius) 0 0 0;
+  background: var(--color-subtle);
+  color: var(--color-fg-muted);
+  padding: var(--space-1) var(--space-3);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-sm);
   cursor: pointer;
+}
+
+.tab-new:hover {
+  color: var(--color-accent);
+}
+
+/* 通知：右下角扑克牌堆叠，容器高 30vh，卡片高度不变只调 z 与 y */
+.notices {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  width: 380px;
+  height: 30vh;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.notice-card {
+  position: absolute;
+  left: 0;
+  right: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  background: var(--color-canvas);
+  font-size: var(--text-sm);
+  pointer-events: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.notice-card.error {
+  border-color: var(--color-danger);
+  background: var(--color-danger-subtle);
+  color: var(--color-danger);
+}
+
+.notice-card.info {
+  border-color: var(--color-border);
+  color: var(--color-fg-muted);
+}
+
+.notice-close {
+  position: absolute;
+  top: 2px;
+  right: var(--space-1);
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: var(--text-md);
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 var(--space-1);
+}
+
+.notice-close:hover {
+  color: var(--color-danger);
+}
+
+.notice-text {
+  padding-right: var(--space-4);
 }

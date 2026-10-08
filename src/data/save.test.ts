@@ -61,3 +61,10 @@ test('tableToJSONL：空表为空串，保留键序', () => {
   assert.equal(tableToJSONL([]), '')
   assert.equal(tableToJSONL([{ Name: 'x', ID: '001' }]), '{"Name":"x","ID":"001"}\n')
 })
+
+test('裁决：字符串 trim 后全空的记录保存时删除', () => {
+  const rows: TableRow[] = [{ ID: '  ', Name: '   ' }, { ID: '001', Name: ' x ' }]
+  const next = compactRows(rows)
+  assert.equal(next.length, 1)
+  assert.equal(next[0].ID, '001')
+})

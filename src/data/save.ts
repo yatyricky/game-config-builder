@@ -1,9 +1,9 @@
 import type { StructDef, TableRow } from './types.ts'
 import { missingRequired } from './edit.ts'
 
-/** 空记录：没有任何非 undefined 值（保存时自动删除，spec 2026-10-08 裁决） */
+/** 空记录（裁决 2026-10-08）：所有值 undefined 或字符串 trim 后为空——保存时自动删除 */
 export function isEmptyRecord(row: TableRow): boolean {
-  return !Object.values(row).some(v => v !== undefined)
+  return !Object.values(row).some(v => v !== undefined && !(typeof v === 'string' && v.trim() === ''))
 }
 
 /** 保存前压缩：删除空记录，其余保持原顺序 */
