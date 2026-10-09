@@ -9,12 +9,12 @@ const strDef: StructDef = {
   kind: 'struct',
   name: 'S6',
   fields: [
-    { name: 'A', type: 'string' },
-    { name: 'B', type: 'string' },
-    { name: 'C', type: 'string' },
-    { name: 'D', type: 'string' },
-    { name: 'E', type: 'string' },
-    { name: 'F', type: 'string' },
+    { name: 'A', type: { raw: 'string' } },
+    { name: 'B', type: { raw: 'string' } },
+    { name: 'C', type: { raw: 'string' } },
+    { name: 'D', type: { raw: 'string' } },
+    { name: 'E', type: { raw: 'string' } },
+    { name: 'F', type: { raw: 'string' } },
   ],
 }
 
@@ -23,10 +23,10 @@ const mixedDef: StructDef = {
   kind: 'struct',
   name: 'T',
   fields: [
-    { name: 'S', type: 'string' },
-    { name: 'N', type: 'number' },
-    { name: 'E', type: 'School' },
-    { name: 'M', type: '', map: true, keyType: 'string', valueType: 'number' },
+    { name: 'S', type: { raw: 'string' } },
+    { name: 'N', type: { raw: 'number' } },
+    { name: 'E', type: { raw: 'School' } },
+    { name: 'M', type: { map: true, keyType: { raw: 'string' }, valueType: { raw: 'number' } } },
   ],
 }
 

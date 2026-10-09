@@ -10,6 +10,7 @@ import type { RecentEntry } from './data/recents.ts'
 import { Grid } from './grid/Grid.tsx'
 import { TopBar } from './ui/TopBar.tsx'
 import { TabBar } from './ui/TabBar.tsx'
+import { SettingsModal } from './ui/SettingsModal.tsx'
 import { Notices } from './ui/Notices.tsx'
 import type { NoticeItem } from './ui/Notices.tsx'
 import type { TableRow } from './data/types.ts'
@@ -36,7 +37,8 @@ export function App() {
   const [current, setCurrent] = useState<RecentEntry | null>(null)
   const [result, setResult] = useState<LoadResult | null>(null)
   const [recents, setRecents] = useState<RecentEntry[]>(() => loadRecentEntries())
-  const [selectedTab, setSelectedTab] = useState<string>('schemas')
+  const [selectedTab, setSelectedTab] = useState<string>('')
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [dirty, setDirty] = useState<Record<string, true>>({})
   const [notices, setNotices] = useState<NoticeItem[]>([])
   const saveTimer = useRef<number | null>(null)
@@ -133,7 +135,8 @@ export function App() {
       setResult(r)
       setDirHandle(handle)
       setCurrent({ id, name })
-      setSelectedTab(r.project.tables[0]?.name ?? 'schemas')
+      setSelectedTab(r.project.tables[0]?.name ?? '')
+      setSettingsOpen(false)
       setDirty({})
       // 打开时间倒排：置顶并回写
       setRecents(rememberRecent(id, name))
@@ -254,7 +257,7 @@ export function App() {
         h.newTable()
       } else if (key === ',') {
         e.preventDefault()
-        setSelectedTab('schemas')
+        setSettingsOpen(o => !o)
       } else if (/^[1-9]$/.test(e.key)) {
         e.preventDefault()
         h.selectSheet(Number(e.key))
@@ -280,11 +283,11 @@ export function App() {
         onReopen={id => void reopen(id)}
         onSave={saveNow}
         onExport={() => pushNotice('info', '导出：NotImplemented（spec 待定义）')}
-        onSchemas={() => setSelectedTab('schemas')}
+        onSchemas={() => setSettingsOpen(true)}
       />
       <div className="content">
         {projectOpen ? (
-          selectedTab !== 'schemas' && table && structDef ? (
+          table && structDef ? (
             <div className="grid-area">
               <Grid
                 key={table.name}
@@ -296,9 +299,7 @@ export function App() {
               />
             </div>
           ) : (
-            <p className="placeholder">
-              {selectedTab === 'schemas' ? '设置：schema 编辑待定（spec）' : `表格 ${selectedTab} 缺少对应的 struct 类型`}
-            </p>
+            <p className="placeholder">{selectedTab ? `表格 ${selectedTab} 缺少对应的 struct 类型` : '工程中没有表格'}</p>
           )
         ) : (
           <p className="placeholder">点击「打开」选择一个配置工程目录</p>
@@ -311,6 +312,9 @@ export function App() {
           onSelect={setSelectedTab}
           onNew={() => pushNotice('info', '新建表格：NotImplemented（依赖 schema 编辑，spec 待定）')}
         />
+      )}
+      {settingsOpen && result && (
+        <SettingsModal project={result.project} onClose={() => setSettingsOpen(false)} />
       )}
       <Notices items={notices} onClose={id => setNotices(xs => xs.filter(x => x.id !== id))} />
     </main>

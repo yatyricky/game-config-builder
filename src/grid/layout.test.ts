@@ -4,9 +4,9 @@ import { ROW_HEADER_WIDTH, ROW_HEIGHT, canvasHeight, layoutColumns, totalWidth, 
 import type { FieldDef } from '../data/types.ts'
 
 const fields: FieldDef[] = [
-  { name: 'ID', type: 'string' },
-  { name: 'Name', type: 'string' },
-  { name: 'Age', type: 'number' },
+  { name: 'ID', type: { raw: 'string' } },
+  { name: 'Name', type: { raw: 'string' } },
+  { name: 'Age', type: { raw: 'number' } },
 ]
 
 test('列布局：偏移按列宽递增', () => {

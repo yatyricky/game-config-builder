@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
+import { isStringType } from '../data/types.ts'
 import type { StructDef, Table } from '../data/types.ts'
 import { COL_WIDTH, ROW_HEADER_WIDTH, ROW_HEIGHT, canvasHeight, layoutColumns, totalWidth, visibleRows } from './layout.ts'
 import { formatCell } from './format.ts'
@@ -96,10 +97,7 @@ export function Grid({ table, def, onEditCell, onApplyWrites, onPasteError }: Gr
   const width = totalWidth(def.fields.length)
   const { start, end } = visibleRows(scrollTop, viewportH, rowCount)
 
-  const isStringField = (col: number): boolean => {
-    const f = def.fields[col]
-    return f.type === 'string' && !f.map && !f.array
-  }
+  const isStringField = (col: number): boolean => isStringType(def.fields[col].type)
 
   const cellString = (row: number, col: number): string => {
     const v = table.rows[row]?.[def.fields[col].name]

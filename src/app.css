@@ -274,3 +274,154 @@ body,
   position: fixed;
   transform: translateX(-50%);
 }
+
+/* 设置 modal：几乎占满工作表区，不占工作表逻辑（M8a 只读卡片） */
+.settings-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(31, 35, 40, 0.3);
+  z-index: 80;
+}
+
+.settings-modal {
+  position: fixed;
+  inset: 32px 48px;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.settings-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-subtle);
+}
+
+.settings-title {
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.settings-sub {
+  flex: 1;
+  color: var(--color-fg-muted);
+  font-size: var(--text-xs);
+}
+
+.settings-close {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-fg-muted);
+  padding: 0 var(--space-1);
+}
+
+.settings-close:hover {
+  color: var(--color-danger);
+}
+
+.settings-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: var(--space-3);
+  padding: var(--space-3);
+  align-content: start;
+}
+
+.settings-card {
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius);
+  background: var(--color-canvas);
+  overflow: hidden;
+}
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-subtle);
+  border-bottom: 1px solid var(--color-border-muted);
+}
+
+.card-name {
+  font-weight: 600;
+}
+
+.card-kind {
+  color: var(--color-fg-muted);
+  font-size: var(--text-xs);
+}
+
+.card-fields {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.card-fields th {
+  text-align: left;
+  color: var(--color-fg-muted);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--color-border-muted);
+}
+
+.card-fields td {
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--color-border-muted);
+}
+
+.card-fields tr:last-child td {
+  border-bottom: none;
+}
+
+.type-label {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+}
+
+.field-attrs {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.attr {
+  font-size: var(--text-xs);
+  padding: 0 var(--space-1);
+  border: 1px solid var(--color-border-muted);
+  border-radius: 4px;
+  color: var(--color-fg-muted);
+}
+
+.card-enum {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+}
+
+.enum-member {
+  font-size: var(--text-sm);
+}
+
+.enum-member em {
+  color: var(--color-fg-muted);
+  font-style: normal;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: var(--text-xs);
+}

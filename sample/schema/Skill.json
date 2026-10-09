@@ -4,10 +4,10 @@
         "name": "Skill"
     },
     "fields": [
-        { "name": "ID", "type": "string", "pk": true },
-        { "name": "Name", "type": "string" },
-        { "name": "School", "type": "School" },
-        { "name": "Effects", "map": true, "keyType": "Effect", "valueType": "number" },
-        { "name": "LevelRequirements", "displayName": "LvlReq", "array": true, "elementType": "number" }
+        { "name": "ID", "type": { "raw": "string" }, "pk": true },
+        { "name": "Name", "type": { "raw": "string" } },
+        { "name": "School", "type": { "raw": "School" } },
+        { "name": "Effects", "type": { "map": true, "keyType": { "raw": "Effect" }, "valueType": { "raw": "number" } } },
+        { "name": "LevelRequirements", "displayName": "LvlReq", "type": { "array": true, "elementType": { "raw": "number" } } }
     ]
 }

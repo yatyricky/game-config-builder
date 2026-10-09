@@ -3,11 +3,11 @@ import assert from 'node:assert/strict'
 import { formatCell } from './format.ts'
 import type { FieldDef } from '../data/types.ts'
 
-const str: FieldDef = { name: 'Name', type: 'string' }
-const num: FieldDef = { name: 'Age', type: 'number' }
-const enumF: FieldDef = { name: 'School', type: 'School' }
-const mapF: FieldDef = { name: 'Effects', type: '', map: true, keyType: 'Effect', valueType: 'number' }
-const arrF: FieldDef = { name: 'LvlReq', type: '', array: true, elementType: 'number' }
+const str: FieldDef = { name: 'Name', type: { raw: 'string' } }
+const num: FieldDef = { name: 'Age', type: { raw: 'number' } }
+const enumF: FieldDef = { name: 'School', type: { raw: 'School' } }
+const mapF: FieldDef = { name: 'Effects', type: { map: true, keyType: { raw: 'Effect' }, valueType: { raw: 'number' } } }
+const arrF: FieldDef = { name: 'LvlReq', type: { array: true, elementType: { raw: 'number' } } }
 
 test('string 字段直出文本', () => {
   assert.deepEqual(formatCell(str, 'Strike'), { kind: 'text', text: 'Strike' })

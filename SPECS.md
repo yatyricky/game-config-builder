@@ -20,6 +20,12 @@ MyProject/
 所有schema合并处理，分离是为了版本管理和易读性，可以定义数据类型，典型的schema类似这样：
 > 自定义类型的名称必须不能与js基础类型冲突
 
+#### 类型定义修订（2026-10-09 裁决：ADT 代数数据类型）
+
+- 字段的 `type` 为递归节点：`{ "raw": "标量或类型名" }` | `{ "array": true, "elementType": <节点> }` | `{ "map": true, "keyType": <节点>, "valueType": <节点> }`，可无限嵌套（如 `map<string, array<map<string, array<number>>>>`）
+- raw 可引用标量（string/number/boolean）或任意命名类型；直接 struct 引用与递归引用（如树节点 `array<自身>`）合法，数据合法性由 JSON 本身承载
+- 旧的扁平写法（map/keyType/valueType/array/element 直接拍在字段上）已废弃，仅认 ADT 形态
+
 ```json schema/School.json
 {
     "meta": {
@@ -43,9 +49,9 @@ MyProject/
         "name": "Effect"
     },
     "fields": [
-        { "name": "ID", "type": "string", "pk": true }, # pk 字段必须为string
-        { "name": "Name", "type": "string" },
-        { "name": "FuncName", "type": "string" }
+        { "name": "ID", "type": { "raw": "string" }, "pk": true }, # pk 字段必须为string
+        { "name": "Name", "type": { "raw": "string" } },
+        { "name": "FuncName", "type": { "raw": "string" } }
     ]
 }
 ```
@@ -57,11 +63,11 @@ MyProject/
         "name": "Skill"
     },
     "fields": [
-        { "name": "ID", "type": "string", "pk": true },
-        { "name": "Name", "type": "string" },
-        { "name": "School", "type": "School" },
-        { "name": "Effects", "map": true, "keyType": "Effect", "valueType": "number" },
-        { "name": "LevelRequirements", "displayName": "LvlReq", "array": true, "elementType": "number" },
+        { "name": "ID", "type": { "raw": "string" }, "pk": true },
+        { "name": "Name", "type": { "raw": "string" } },
+        { "name": "School", "type": { "raw": "School" } },
+        { "name": "Effects", "type": { "map": true, "keyType": { "raw": "Effect" }, "valueType": { "raw": "number" } } },
+        { "name": "LevelRequirements", "displayName": "LvlReq", "type": { "array": true, "elementType": { "raw": "number" } } }
     ]
 }
 ```
@@ -264,6 +270,7 @@ Schemas | School | Effect | Skill | [+新建表格] ## 一行tab标签页，新�
 - Schemas 不再作为底栏页签，入口移至顶栏按钮，快捷键 Ctrl+,（配置的意味）
 - Ctrl+1..9 = 打开第 n 张工作表（Schemas 不占序号）
 - 技术事实：FSA 安全模型不暴露完整路径，顶栏下拉只能显示目录名
+- 设置（Schemas 入口）不占工作表：以几乎占满工作表区的 modal 弹出，保证工作表逻辑一致性；schema 以一类型一卡片呈现
 
 ## 后端（File System Access API）
 

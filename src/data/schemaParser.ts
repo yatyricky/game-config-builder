@@ -1,5 +1,5 @@
-import { JS_PRIMITIVE_TYPES } from './types.ts'
-import type { EnumDef, FieldDef, StructDef, TypeDef, ValidationIssue } from './types.ts'
+import { JS_PRIMITIVE_TYPES, isStringType } from './types.ts'
+import type { EnumDef, FieldDef, StructDef, TypeDef, TypeNode, ValidationIssue } from './types.ts'
 
 export interface SchemaFileInput {
   file: string
@@ -14,8 +14,8 @@ export interface SchemaParseResult {
 const SCALAR_TYPES = new Set(['string', 'number', 'boolean'])
 
 /**
- * 合并解析 schema/*.json。只执行 spec 明说的校验：
- * pk 必须为 string、自定义类型名不得与 js 基础类型冲突、类型引用必须存在。
+ * 合并解析 schema/*.json（2026-10-09 修订为 ADT 类型节点）。只执行 spec 明说的校验：
+ * pk 必须为 string、自定义类型名不得与 js 基础类型冲突、类型引用必须存在（递归节点内同样校验）。
  */
 export function parseSchemas(files: SchemaFileInput[]): SchemaParseResult {
   const types = new Map<string, TypeDef>()
@@ -37,31 +37,28 @@ export function parseSchemas(files: SchemaFileInput[]): SchemaParseResult {
     if (def.kind === 'struct') structs.push({ file, def })
   }
 
-  // 引用校验放在合并后：类型允许跨文件、前向引用
-  const checkRef = (file: string, at: string, type: string | undefined): void => {
-    if (!type) {
-      issues.push({ file, at, message: '缺少类型声明' })
-    } else if (!SCALAR_TYPES.has(type) && !types.has(type)) {
-      issues.push({ file, at, message: `引用不存在的类型 ${type}` })
+  // 引用校验放在合并后：类型允许跨文件、前向引用、递归引用（数据合法性由 JSON 本身承载）
+  const checkRef = (node: TypeNode, file: string, at: string): void => {
+    if ('raw' in node) {
+      if (!SCALAR_TYPES.has(node.raw) && !types.has(node.raw)) {
+        issues.push({ file, at, message: `引用不存在的类型 ${node.raw}` })
+      }
+      return
     }
+    if ('array' in node) {
+      checkRef(node.elementType, file, `${at}[]`)
+      return
+    }
+    checkRef(node.keyType, file, `${at}{key}`)
+    checkRef(node.valueType, file, `${at}{value}`)
   }
   for (const { file, def } of structs) {
     for (const f of def.fields) {
       const at = `${def.name}.${f.name}`
-      if (f.pk && f.type !== 'string') {
+      if (f.pk && !isStringType(f.type)) {
         issues.push({ file, at, message: 'pk 字段必须为 string' })
       }
-      // 普通字段用 type；map/array 字段用各自的子类型，不要求 type
-      if (!f.map && !f.array) {
-        checkRef(file, at, f.type)
-      }
-      if (f.map) {
-        checkRef(file, `${at}(key)`, f.keyType)
-        checkRef(file, `${at}(value)`, f.valueType)
-      }
-      if (f.array) {
-        checkRef(file, `${at}(element)`, f.elementType)
-      }
+      checkRef(f.type, file, at)
     }
   }
 
@@ -113,28 +110,40 @@ function toTypeDef(file: string, json: unknown, issues: ValidationIssue[]): Type
   for (const fj of fieldsJson) {
     if (!isObj(fj) || typeof fj['name'] !== 'string') {
       issues.push({ file, message: `struct ${name} 的字段必须是含 name 的对象` })
-      return null
+      continue
     }
-    fields.push(toField(fj))
+    const type = toTypeNode(fj['type'], file, `${name}.${fj['name'] as string}`, issues)
+    if (!type) continue
+    const f: FieldDef = { name: fj['name'], type }
+    if (fj['pk'] === true) f.pk = true
+    if (typeof fj['displayName'] === 'string') f.displayName = fj['displayName']
+    if ('default' in fj) f.default = fj['default']
+    fields.push(f)
   }
   const def: StructDef = { kind, name, fields }
   return def
 }
 
-function toField(fj: Record<string, unknown>): FieldDef {
-  const f: FieldDef = {
-    name: fj['name'] as string,
-    type: typeof fj['type'] === 'string' ? fj['type'] : '',
+/** 递归解析 ADT 类型节点：{raw} | {array,elementType} | {map,keyType,valueType}；无法解析时记 issue 返回 null */
+function toTypeNode(v: unknown, file: string, at: string, issues: ValidationIssue[]): TypeNode | null {
+  if (!isObj(v)) {
+    issues.push({ file, at, message: 'type 必须是 {raw} | {array,elementType} | {map,keyType,valueType} 节点' })
+    return null
   }
-  if (fj['pk'] === true) f.pk = true
-  if (typeof fj['displayName'] === 'string') f.displayName = fj['displayName']
-  if ('default' in fj) f.default = fj['default']
-  if (fj['map'] === true) f.map = true
-  if (typeof fj['keyType'] === 'string') f.keyType = fj['keyType']
-  if (typeof fj['valueType'] === 'string') f.valueType = fj['valueType']
-  if (fj['array'] === true) f.array = true
-  if (typeof fj['elementType'] === 'string') f.elementType = fj['elementType']
-  return f
+  if (typeof v['raw'] === 'string') return { raw: v['raw'] }
+  if (v['array'] === true) {
+    const el = toTypeNode(v['elementType'], file, `${at}[]`, issues)
+    if (!el) return null
+    return { array: true, elementType: el }
+  }
+  if (v['map'] === true) {
+    const k = toTypeNode(v['keyType'], file, `${at}{key}`, issues)
+    const val = toTypeNode(v['valueType'], file, `${at}{value}`, issues)
+    if (!k || !val) return null
+    return { map: true, keyType: k, valueType: val }
+  }
+  issues.push({ file, at, message: 'type 需要 {raw} | {array,elementType} | {map,keyType,valueType}' })
+  return null
 }
 
 function isObj(v: unknown): v is Record<string, unknown> {

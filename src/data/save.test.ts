@@ -7,9 +7,9 @@ const def: StructDef = {
   kind: 'struct',
   name: 'Skill',
   fields: [
-    { name: 'ID', type: 'string', pk: true },
-    { name: 'Name', type: 'string' },
-    { name: 'Note', type: 'string', default: '' },
+    { name: 'ID', type: { raw: 'string' }, pk: true },
+    { name: 'Name', type: { raw: 'string' } },
+    { name: 'Note', type: { raw: 'string' }, default: '' },
   ],
 }
 

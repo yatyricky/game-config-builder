@@ -4,9 +4,9 @@
         "name": "Effect"
     },
     "fields": [
-        { "name": "ID", "type": "string", "pk": true },
-        { "name": "Name", "type": "string" },
-        { "name": "FuncName", "type": "string" },
-        { "name": "Priority", "type": "number", "default": 0 }
+        { "name": "ID", "type": { "raw": "string" }, "pk": true },
+        { "name": "Name", "type": { "raw": "string" } },
+        { "name": "FuncName", "type": { "raw": "string" } },
+        { "name": "Priority", "type": { "raw": "number" }, "default": 0 }
     ]
 }

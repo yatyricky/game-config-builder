@@ -1,3 +1,4 @@
+import { typeNodeLabel } from './types.ts'
 import type { FieldDef, StructDef, TableRow } from './types.ts'
 
 export interface ClipboardCell {
@@ -26,11 +27,9 @@ export function defineImplicitConversion(from: string, to: string, fn: (v: unkno
 // spec 示例种子：number→string 已定义；string→number 未定义（粘贴报错阻断）
 defineImplicitConversion('number', 'string', v => String(v))
 
-/** 字段的数据类型标签：标量用 type；map/array 用组合标签（同标签恒等粘贴） */
+/** 字段的数据类型标签（ADT 递归序列化，同标签恒等粘贴） */
 export function fieldTypeOf(f: FieldDef): string {
-  if (f.map) return `map<${f.keyType ?? ''},${f.valueType ?? ''}>`
-  if (f.array) return `array<${f.elementType ?? ''}>`
-  return f.type
+  return typeNodeLabel(f.type)
 }
 
 /** ctrl+c：选中区（矩阵或单格）的值快照；缺值单元格 value 为 undefined */
