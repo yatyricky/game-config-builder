@@ -154,7 +154,7 @@ function rowCountOf(def: TypeDef): number {
  */
 export function SettingsModal({ project, projectName, actions, onClose }: SettingsModalProps) {
   const closeRef = useRef<HTMLButtonElement>(null)
-  const [geo] = useState(() => {
+  const geo = useMemo(() => {
     const m = new Map<string, CardGeo>()
     for (const [name, def] of project.types) {
       const rowY = new Map<string, number>()
@@ -168,7 +168,7 @@ export function SettingsModal({ project, projectName, actions, onClose }: Settin
       m.set(name, { def, w: CARD_W, h: HEADER_H + rowCountOf(def) * ROW_H, rowY, anchorY })
     }
     return m
-  })
+  }, [project.types])
   const [positions, setPositions] = useState<Map<string, Pos>>(() => {
     const auto = autoLayout(project.types)
     const stored = loadLayout(projectName)
@@ -291,6 +291,19 @@ export function SettingsModal({ project, projectName, actions, onClose }: Settin
     return out
   }, [positions, geo, project.types])
 
+  /** 悬停 title：完整字段信息（名称 + 类型标签 + 约束全称，与行内图标一一对应） */
+  const rowTitle = (f: FieldDef): string => {
+    const parts: string[] = []
+    if (f.pk) parts.push('主键')
+    if (f.index) parts.push('索引')
+    if (f.unique) parts.push('唯一')
+    if (f.nullable) parts.push('可空')
+    if (f.default !== undefined) parts.push(`默认值=${JSON.stringify(f.default)}`)
+    if (f.group) parts.push('分组')
+    const badge = parts.length > 0 ? '  ' + parts.map(p => `(${p})`).join('') : ''
+    return `${f.name} ${typeNodeLabel(f.type)}${badge}`
+  }
+
   const edgePath = (e: Edge): string => {
     const dx = e.back ? 90 : Math.max(50, (e.x2 - e.x1) / 2)
     return `M ${e.x1} ${e.y1} C ${e.x1 + dx} ${e.y1}, ${e.x2 - (e.back ? -dx : dx)} ${e.y2}, ${e.x2} ${e.y2}`
@@ -379,7 +392,7 @@ export function SettingsModal({ project, projectName, actions, onClose }: Settin
                           </div>
                         ))
                       : d.fields.map(f => (
-                          <div key={f.name} className="er-row clickable" onClick={() => actions.editField(name, f.name)}>
+                          <div key={f.name} className="er-row clickable" title={rowTitle(f)} onClick={() => actions.editField(name, f.name)}>
                             <span className="er-row-main">
                               <span className="er-row-name">{f.name}</span>
                               <span className="type-label">{typeNodeLabel(f.type)}</span>
