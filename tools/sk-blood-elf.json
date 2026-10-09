@@ -1,6 +1,7 @@
 {
   "version": 1,
-  "playerLevel": 0,
+  "playerLevel": 2,
+  "talentPoints": 1,
   "nodes": [
     {
       "id": "arcane_shock",
@@ -8,56 +9,58 @@
       "name": "奥术冲击",
       "desc": "mag dd +, debuff: hit rate--\n",
       "shape": "rect",
-      "reqLevel": 0,
-      "maxLevel": 5,
+      "reqLevel": 1,
+      "maxLevel": 1,
+      "skip": 0,
+      "autoUnlock": true,
       "reqSkills": [],
       "x": 506,
       "y": 198,
-      "points": 0
+      "points": 1
     },
     {
       "id": "exposed_weakness",
       "icon": "",
-      "name": "暴露破绽",
-      "desc": "enemy miss: phyx amp",
+      "name": "神秘疗愈",
+      "desc": "Cast on self: heal for base damage\n",
       "shape": "circle",
       "reqLevel": 3,
       "maxLevel": 3,
-      "reqSkills": [
-        "arcane_shock"
-      ],
-      "x": 638,
-      "y": 374,
+      "skip": 0,
+      "autoUnlock": false,
+      "reqSkills": [],
+      "x": 506,
+      "y": 726,
       "points": 0
     },
     {
       "id": "arcane_pursuit",
       "icon": "",
-      "name": "奥术追击",
-      "desc": "same target dmg++\n",
+      "name": "伤害强化",
+      "desc": "debuff -> dd +++\n",
       "shape": "circle",
-      "reqLevel": 3,
+      "reqLevel": 2,
       "maxLevel": 3,
-      "reqSkills": [
-        "arcane_shock"
-      ],
+      "skip": 0,
+      "autoUnlock": false,
+      "reqSkills": [],
       "x": 506,
-      "y": 374,
-      "points": 0
+      "y": 330,
+      "points": 1
     },
     {
       "id": "arcane_erosion",
       "icon": "",
-      "name": "奥术侵蚀",
-      "desc": "debuff dur +\n",
+      "name": "破魔",
+      "desc": "hit rate debuff -> mag amp\n",
       "shape": "circle",
       "reqLevel": 3,
       "maxLevel": 3,
-      "reqSkills": [
-        "arcane_shock"
-      ],
-      "x": 374,
-      "y": 374,
+      "skip": 0,
+      "autoUnlock": false,
+      "reqSkills": [],
+      "x": 506,
+      "y": 462,
       "points": 0
     },
     {
@@ -66,12 +69,14 @@
       "name": "盾牌格挡",
       "desc": "block rate +, block points +\n",
       "shape": "rect",
-      "reqLevel": 0,
-      "maxLevel": 5,
+      "reqLevel": 2,
+      "maxLevel": 1,
+      "skip": 0,
+      "autoUnlock": true,
       "reqSkills": [],
       "x": 902,
       "y": 198,
-      "points": 0
+      "points": 1
     },
     {
       "id": "spell_block",
@@ -81,10 +86,10 @@
       "shape": "circle",
       "reqLevel": 3,
       "maxLevel": 3,
-      "reqSkills": [
-        "shield_block"
-      ],
-      "x": 1034,
+      "skip": 0,
+      "autoUnlock": false,
+      "reqSkills": [],
+      "x": 902,
       "y": 374,
       "points": 0
     },
@@ -94,10 +99,12 @@
       "name": "阳炎冲击",
       "desc": "ground dot, stackable\n",
       "shape": "rect",
-      "reqLevel": 0,
-      "maxLevel": 5,
+      "reqLevel": 4,
+      "maxLevel": 1,
+      "skip": 0,
+      "autoUnlock": true,
       "reqSkills": [],
-      "x": 1298,
+      "x": 1254,
       "y": 198,
       "points": 0
     },
@@ -109,9 +116,9 @@
       "shape": "circle",
       "reqLevel": 3,
       "maxLevel": 3,
-      "reqSkills": [
-        "shield_block"
-      ],
+      "skip": 0,
+      "autoUnlock": false,
+      "reqSkills": [],
       "x": 770,
       "y": 374,
       "points": 0
@@ -124,10 +131,10 @@
       "shape": "circle",
       "reqLevel": 5,
       "maxLevel": 3,
-      "reqSkills": [
-        "spell_block"
-      ],
-      "x": 902,
+      "skip": 0,
+      "autoUnlock": false,
+      "reqSkills": [],
+      "x": 770,
       "y": 506,
       "points": 0
     },
@@ -139,10 +146,10 @@
       "shape": "circle",
       "reqLevel": 5,
       "maxLevel": 1,
-      "reqSkills": [
-        "spell_block"
-      ],
-      "x": 1034,
+      "skip": 0,
+      "autoUnlock": false,
+      "reqSkills": [],
+      "x": 902,
       "y": 506,
       "points": 0
     },
@@ -154,10 +161,12 @@
       "shape": "circle",
       "reqLevel": 3,
       "maxLevel": 3,
+      "skip": 0,
+      "autoUnlock": false,
       "reqSkills": [
         "sun_flame_strike"
       ],
-      "x": 1298,
+      "x": 1210,
       "y": 374,
       "points": 0
     },
@@ -169,10 +178,12 @@
       "shape": "circle",
       "reqLevel": 5,
       "maxLevel": 1,
+      "skip": 0,
+      "autoUnlock": false,
       "reqSkills": [
         "arcane_torrent"
       ],
-      "x": 1298,
+      "x": 1210,
       "y": 506,
       "points": 0
     },
@@ -184,10 +195,12 @@
       "shape": "circle",
       "reqLevel": 3,
       "maxLevel": 3,
+      "skip": 0,
+      "autoUnlock": false,
       "reqSkills": [
         "sun_flame_strike"
       ],
-      "x": 1430,
+      "x": 1386,
       "y": 374,
       "points": 0
     },
@@ -199,11 +212,10 @@
       "shape": "circle",
       "reqLevel": 5,
       "maxLevel": 3,
-      "reqSkills": [
-        "sun_flame_strike",
-        "spell_block"
-      ],
-      "x": 1166,
+      "skip": 0,
+      "autoUnlock": false,
+      "reqSkills": [],
+      "x": 1034,
       "y": 506,
       "points": 0
     },
@@ -214,9 +226,11 @@
       "desc": "all dr%, shield block reflects block pts, thorns effect synergy\n",
       "shape": "rect",
       "reqLevel": 6,
-      "maxLevel": 3,
+      "maxLevel": 1,
+      "skip": 0,
+      "autoUnlock": true,
       "reqSkills": [],
-      "x": 1694,
+      "x": 1606,
       "y": 198,
       "points": 0
     },
@@ -228,10 +242,12 @@
       "shape": "circle",
       "reqLevel": 8,
       "maxLevel": 2,
+      "skip": 0,
+      "autoUnlock": false,
       "reqSkills": [
         "shield_of_sindorei"
       ],
-      "x": 1562,
+      "x": 1518,
       "y": 374,
       "points": 0
     },
@@ -243,10 +259,12 @@
       "shape": "circle",
       "reqLevel": 8,
       "maxLevel": 2,
+      "skip": 0,
+      "autoUnlock": false,
       "reqSkills": [
         "shield_of_sindorei"
       ],
-      "x": 1826,
+      "x": 1694,
       "y": 374,
       "points": 0
     },
@@ -258,9 +276,11 @@
       "shape": "circle",
       "reqLevel": 0,
       "maxLevel": 5,
+      "skip": 0,
+      "autoUnlock": false,
       "reqSkills": [],
-      "x": 1166,
-      "y": 682,
+      "x": 1078,
+      "y": 946,
       "points": 0
     },
     {
@@ -271,9 +291,11 @@
       "shape": "circle",
       "reqLevel": 0,
       "maxLevel": 5,
+      "skip": 0,
+      "autoUnlock": false,
       "reqSkills": [],
-      "x": 1430,
-      "y": 682,
+      "x": 1518,
+      "y": 902,
       "points": 0
     },
     {
@@ -284,9 +306,11 @@
       "shape": "circle",
       "reqLevel": 0,
       "maxLevel": 5,
+      "skip": 0,
+      "autoUnlock": false,
       "reqSkills": [],
-      "x": 1298,
-      "y": 682,
+      "x": 1386,
+      "y": 902,
       "points": 0
     },
     {
@@ -297,9 +321,11 @@
       "shape": "circle",
       "reqLevel": 0,
       "maxLevel": 5,
+      "skip": 0,
+      "autoUnlock": false,
       "reqSkills": [],
-      "x": 902,
-      "y": 682,
+      "x": 946,
+      "y": 946,
       "points": 0
     },
     {
@@ -310,9 +336,11 @@
       "shape": "circle",
       "reqLevel": 0,
       "maxLevel": 5,
+      "skip": 0,
+      "autoUnlock": false,
       "reqSkills": [],
-      "x": 770,
-      "y": 682,
+      "x": 726,
+      "y": 902,
       "points": 0
     },
     {
@@ -323,9 +351,26 @@
       "shape": "circle",
       "reqLevel": 0,
       "maxLevel": 5,
+      "skip": 0,
+      "autoUnlock": false,
       "reqSkills": [],
-      "x": 1034,
-      "y": 682,
+      "x": 1210,
+      "y": 990,
+      "points": 0
+    },
+    {
+      "id": "skill_8",
+      "icon": "",
+      "name": "法力偷取",
+      "desc": "debuff: LM on it.\n",
+      "shape": "circle",
+      "reqLevel": 5,
+      "maxLevel": 5,
+      "skip": 0,
+      "autoUnlock": false,
+      "reqSkills": [],
+      "x": 506,
+      "y": 594,
       "points": 0
     }
   ]

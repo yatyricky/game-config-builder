@@ -50,6 +50,9 @@
   #hud .sub{font-size:11.5px;color:#b7a67c;margin-top:2px}
   #hud .hud-btns{display:flex;gap:6px;margin-top:8px}
   #hud .btn{font-size:12px;padding:4px 10px}
+  #hud .hud-gift{width:46px;margin-left:4px;background:#0f0b06;border:1px solid #453619;border-radius:4px;
+    color:var(--gold-bright);text-align:center;font:12px/1.4 Consolas,"Courier New",monospace;padding:2px;outline:none;vertical-align:middle}
+  #hud .hud-gift:focus{border-color:var(--gold)}
 
   #hint{position:absolute;left:14px;bottom:12px;color:#8a7a58;font-size:12px;
     background:rgba(11,8,5,.72);padding:4px 12px;border-radius:6px;pointer-events:none}
@@ -146,6 +149,7 @@
     <div id="hud">
       <div class="lv">玩家等级 <b id="hudLevel">1</b></div>
       <div class="sub">可用天赋点 <b id="hudPts" style="color:var(--gold-bright)">1</b></div>
+      <div class="sub">默认赠送天赋点 <input type="number" id="hudGift" class="hud-gift" min="0" max="999" step="1" value="1" title="初始与重置时赠送的天赋点数量；修改后立即生效"></div>
       <div class="sub">已点亮 <span id="hudLit">0</span> / <span id="hudTotal">0</span> 个技能</div>
       <div class="hud-btns">
         <button class="btn" id="btnLevelUp" title="等级 +1，并获得 1 天赋点">升级</button>
@@ -260,6 +264,7 @@ const tooltip  = document.getElementById('tooltip');
 const toasts   = document.getElementById('toasts');
 const hudLevel = document.getElementById('hudLevel');
 const hudPts   = document.getElementById('hudPts');
+const hudGift  = document.getElementById('hudGift');
 const hudLit   = document.getElementById('hudLit');
 const hudTotal = document.getElementById('hudTotal');
 const jsonView = document.getElementById('jsonView');
@@ -301,7 +306,6 @@ const state = {
   mouse: {x:0, y:0},
   drag: null,       // {id,dx,dy,moved,startX,startY}
   flashUntil: new Map(), // id -> timestamp（加点失败时红闪）
-  spawnCount: 0,
 };
 
 const nodeById = id => state.nodes.find(n => n.id === id);
@@ -373,11 +377,29 @@ function buildLibrary(){
     list.appendChild(btn);
   }
 }
-function spawnNode(preset){
+// 在画布可视范围内找空位：把画布按节点尺寸（含下方标签）划分网格，
+// 从中心格按距离取最近的未占用格，保证新节点永远不会落到可视范围外
+function findSpawnSpot(taken){
   const r = stage.getBoundingClientRect();
-  const i = state.spawnCount++;
-  const dx = ((i % 3) - 1) * 150, dy = (Math.floor(i / 3) - 1) * 130;
+  const takenKeys = new Set((taken || state.nodes).map(n => Math.round(n.x) + ',' + Math.round(n.y)));
+  const cols = Math.max(1, Math.floor((r.width - 24) / (NODE_W + 12)));
+  const rows = Math.max(1, Math.floor((r.height - 76) / (NODE_H + 56)));
+  const cc = (cols - 1) / 2, cr = (rows - 1) / 2;
+  let best = null, bestD = Infinity;
+  for (let row = 0; row < rows; row++){
+    for (let col = 0; col < cols; col++){
+      const x = snapGrid(12 + NODE_W / 2 + col * (NODE_W + 12));
+      const y = snapGrid(44 + NODE_H / 2 + row * (NODE_H + 56));
+      if (takenKeys.has(x + ',' + y)) continue;
+      const d = (col - cc) ** 2 + (row - cr) ** 2;
+      if (d < bestD){ bestD = d; best = { x, y }; }
+    }
+  }
+  return best || { x: snapGrid(r.width / 2), y: snapGrid(r.height / 2) }; // 格子用尽时允许重叠，但仍在可视范围内
+}
+function spawnNode(preset){
   const base = preset.make();
+  const p = findSpawnSpot(state.nodes);
   const n = {
     id: uniqueId('skill'),
     ...base,
@@ -388,8 +410,8 @@ function spawnNode(preset){
     autoUnlock: false,
     reqSkills: [],
     points: 0,
-    x: snapGrid(r.width / 2 + dx),
-    y: snapGrid(r.height / 2 + dy),
+    x: p.x,
+    y: p.y,
   };
   state.nodes.push(n);
   select(n.id);
@@ -863,6 +885,15 @@ function deleteNode(id){
 }
 inspDelete.addEventListener('click', () => { if (state.selectedId) deleteNode(state.selectedId); });
 
+function readGiftDefault(){
+  return clampInt(hudGift.value, 0, 999, 1); // 非法输入回退默认 1
+}
+hudGift.addEventListener('change', () => {
+  state.talentPoints = readGiftDefault(); // 修改后立即生效
+  hudGift.value = state.talentPoints;
+  refreshAll();
+});
+hudGift.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); hudGift.blur(); } });
 document.getElementById('btnLevelUp').addEventListener('click', () => {
   state.playerLevel++;
   state.talentPoints++;
@@ -877,9 +908,9 @@ document.getElementById('btnGrant').addEventListener('click', () => {
 document.getElementById('btnReset').addEventListener('click', () => {
   state.nodes.forEach(n => n.points = 0);
   state.playerLevel = 1;
-  state.talentPoints = 1;
+  state.talentPoints = readGiftDefault(); // 重置按"默认赠送天赋点"设置
   refreshAll();
-  toast('已重置：等级 1 / 天赋点 1');
+  toast(`已重置：等级 1 / 天赋点 ${state.talentPoints}`);
 });
 
 // ================= 数据面板 =================
@@ -949,9 +980,8 @@ function importData(text){
   catch (e){ toast('JSON 解析失败：' + e.message, 'err'); return; }
   const arr = Array.isArray(obj) ? obj : obj && obj.nodes;
   if (!Array.isArray(arr)){ toast('JSON 格式不正确：需要 nodes 数组', 'err'); return; }
-  const r = stage.getBoundingClientRect();
   const out = []; const seen = new Set();
-  arr.forEach((raw, i) => {
+  arr.forEach((raw) => {
     if (!raw || typeof raw !== 'object') return;
     let id = String(raw.id ?? '').trim() || uniqueId('skill');
     while (seen.has(id)) id += '_2';
@@ -969,10 +999,16 @@ function importData(text){
       skip: clampInt(raw.skip, 0, 99, 0),
       autoUnlock: raw.autoUnlock === true,
       reqSkills: [...new Set(req)],
-      x: snapGrid(Number.isFinite(+raw.x) ? +raw.x : r.width / 2 + ((i % 3) - 1) * 150),
-      y: snapGrid(Number.isFinite(+raw.y) ? +raw.y : r.height / 2 + (Math.floor(i / 3) - 1) * 130),
+      x: 0,
+      y: 0,
       points: Math.max(0, clampInt(raw.points, 0, 999, 0)),
     };
+    // 坐标齐全按原坐标吸附，否则放进可视范围内的空位
+    const p = (Number.isFinite(+raw.x) && Number.isFinite(+raw.y))
+      ? { x: snapGrid(+raw.x), y: snapGrid(+raw.y) }
+      : findSpawnSpot(out);
+    n.x = p.x;
+    n.y = p.y;
     n.points = Math.min(n.points, n.maxLevel);
     out.push(n);
   });
@@ -984,7 +1020,6 @@ function importData(text){
   state.talentPoints = Math.max(0, clampInt(obj.talentPoints, 0, 999, 1));
   state.nodes = out;
   state.selectedId = null;
-  state.spawnCount = out.length;
   refreshAll();
   toast(`已加载 ${out.length} 个技能节点`);
 }
@@ -1002,7 +1037,6 @@ function seedDemo(){
     { id:'ice_armor',    name:'寒冰护甲', desc:'被动：受击时冻结攻击者。',     reqLevel:3, maxLevel:5, reqSkills:['frost_nova'],     x:cx+150, y:cy+30 },
   ];
   state.nodes = demo.map(n => ({ ...n, icon:'', points:0, shape:'rect', skip: n.skip || 0, autoUnlock: false, x: snapGrid(n.x), y: snapGrid(n.y) }));
-  state.spawnCount = demo.length;
 }
 
 // ================= 启动 =================
