@@ -328,11 +328,14 @@ export function SettingsModal({ project, projectName, onClose }: SettingsModalPr
                         ))
                       : d.fields.map(f => (
                           <div key={f.name} className="er-row">
-                            <span>
-                              {f.pk && <i className="pk-dot" title="pk" />}
-                              {f.name}
+                            <span className="er-row-main">
+                              <span className="er-row-name">{f.name}</span>
+                              <span className="type-label">{typeNodeLabel(f.type)}</span>
                             </span>
-                            <span className="type-label">{typeNodeLabel(f.type)}</span>
+                            <span className="er-row-badges">
+                              {f.pk && <span className="attr">pk</span>}
+                              {f.default !== undefined && <span className="attr">default={JSON.stringify(f.default)}</span>}
+                            </span>
                           </div>
                         ))}
                   </section>
