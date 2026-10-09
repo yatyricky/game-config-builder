@@ -519,6 +519,12 @@ body,
   flex: none;
 }
 
+.er-row-badges svg.constraint-icon {
+  display: block;
+  color: var(--color-fg-muted);
+  flex: none;
+}
+
 .attr {
   font-size: var(--text-xs);
   padding: 0 var(--space-1);

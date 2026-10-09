@@ -149,3 +149,15 @@ test('校验：枚举成员 name/displayName/value 重复报 issue（裁决 2026
   }
   assert.ok(parseSchemas([{ file: 'e3', json: dupDn }]).issues.some(i => i.message.includes('displayName 重复')))
 })
+
+test('校验：map 键不允许 array/map 复合类型（裁决 2026-10-10）', () => {
+  const bad = {
+    meta: { type: 'struct', name: 'Bad' },
+    fields: [
+      { name: 'ID', type: { raw: 'string' }, pk: true },
+      { name: 'M', type: { map: true, keyType: { array: true, elementType: { raw: 'string' } }, valueType: { raw: 'number' } } },
+    ],
+  }
+  const { issues } = parseSchemas([{ file: 'schema/Bad.json', json: bad }])
+  assert.ok(issues.some(i => i.message.includes('map 键不允许')))
+})

@@ -49,7 +49,12 @@ export function parseSchemas(files: SchemaFileInput[]): SchemaParseResult {
       checkRef(node.elementType, file, `${at}[]`)
       return
     }
-    checkRef(node.keyType, file, `${at}{key}`)
+    // 裁决 2026-10-10：map 键不允许 array/map 复合类型（标量与命名引用合法）
+    if ('array' in node.keyType || 'map' in node.keyType) {
+      issues.push({ file, at: `${at}{key}`, message: 'map 键不允许 array/map 复合类型' })
+    } else {
+      checkRef(node.keyType, file, `${at}{key}`)
+    }
     checkRef(node.valueType, file, `${at}{value}`)
   }
   for (const { file, def } of structs) {

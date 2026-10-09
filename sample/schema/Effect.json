@@ -4,9 +4,35 @@
         "name": "Effect"
     },
     "fields": [
-        { "name": "ID", "type": { "raw": "string" }, "pk": true },
-        { "name": "Name", "type": { "raw": "string" } },
-        { "name": "FuncName", "type": { "raw": "string" } },
-        { "name": "Priority", "type": { "raw": "number" }, "default": 0 }
+        {
+            "name": "ID",
+            "type": {
+                "raw": "string"
+            },
+            "pk": true
+        },
+        {
+            "name": "Name",
+            "type": {
+                "raw": "string"
+            },
+            "index": true,
+            "unique": true,
+            "nullable": true,
+            "group": true
+        },
+        {
+            "name": "FuncName",
+            "type": {
+                "raw": "string"
+            }
+        },
+        {
+            "name": "Priority",
+            "type": {
+                "raw": "number"
+            },
+            "default": 0
+        }
     ]
 }

@@ -128,6 +128,7 @@
   - [ ] 三闸全绿（79 用例，含深嵌套/递归/嵌套悬空引用用例）
   - [ ] sample 渲染不回归（string 列照旧、ADT 列 NotImplemented、粘贴标签 map<Effect,number>）
   - [ ] Ctrl+, / 设置按钮弹出 modal：ER 节点图（enum 无连线、Skills.Effects 连 Effect.ID pk 行）；拖拽卡片连线跟随；刷新后位置/缩放保持；重置布局回分层；关闭路径齐全；modal 开时网格键盘失效
+  - [ ] 字段行约束以 SVG 图标展示（钥匙/排序条/雪花/空集/魔棒/文件夹，hover 全称，2026-10-10）；map 键禁复合类型（解析器 issue + 级联下拉过滤），键字符串化语义入库
   - [ ] selectedTab 仅表名（schemas 占位面板移除），Ctrl+1..9 = 各表
 - 任务卡：tasks/M8.md。
 

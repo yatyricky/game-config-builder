@@ -202,6 +202,12 @@
           <input type="number" id="inspSkip" min="0" max="99" step="1" title="升下一级需跳过的玩家等级数：1=每级间隔2级（如需求等级1的五级对应玩家等级1/3/5/7/9），0=不跳级">
         </div>
       </div>
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--parch)">
+          <input type="checkbox" id="inspAutoUnlock" style="width:auto;accent-color:#c9a959">
+          自动解锁
+        </label>
+      </div>
       <div class="divider"></div>
       <div class="field">
         <label>当前点数</label>
@@ -269,6 +275,7 @@ const inspShape = document.getElementById('inspShape');
 const inspReqLevel = document.getElementById('inspReqLevel');
 const inspMaxLevel = document.getElementById('inspMaxLevel');
 const inspSkip = document.getElementById('inspSkip');
+const inspAutoUnlock = document.getElementById('inspAutoUnlock');
 const inspPtsVal= document.getElementById('inspPtsVal');
 const inspAdd   = document.getElementById('inspAdd');
 const inspSub   = document.getElementById('inspSub');
@@ -285,7 +292,7 @@ const snapGrid = v => Math.max(GRID / 2, 22 + Math.round((v - 22) / GRID) * GRID
 
 // ================= 状态 =================
 const state = {
-  nodes: [],        // {id,icon,name,desc,shape,skip,reqLevel,maxLevel,reqSkills[],x,y,points}
+  nodes: [],        // {id,icon,name,desc,shape,skip,autoUnlock,reqLevel,maxLevel,reqSkills[],x,y,points}
   playerLevel: 1,   // 玩家等级（右上角"升级"按钮提升，不随加点变化）
   talentPoints: 1,  // 可用天赋点（初始送 1；升级/送天赋获得，加点消耗）
   selectedId: null,
@@ -312,13 +319,15 @@ function uniqueId(base){
   return base + '_' + i;
 }
 
-// 加点规则：等级匹配（含跳级要求）+ 前置至少 1 点（除此之外没有任何限制）
+// 加点规则：自动解锁节点不可手动加点；普通节点=等级匹配（含跳级要求）+ 前置至少 1 点
 function canPick(n){
+  if (n.autoUnlock) return playerLevel() >= n.reqLevel;
   const lv = playerLevel();
   if (lv < nextLevelReq(n)) return false;
   return n.reqSkills.every(id => (nodeById(id)?.points ?? 0) >= 1);
 }
 function blockReason(n){
+  if (n.autoUnlock) return '自动解锁节点：玩家等级达到需求等级后自动点亮';
   if (n.points >= n.maxLevel) return '已达到最大等级';
   if (state.talentPoints <= 0) return '天赋点不足';
   const lv = playerLevel();
@@ -342,6 +351,7 @@ function tryAllocate(n){
   refreshAll();
 }
 function removePoint(n){
+  if (n.autoUnlock){ toast('自动解锁节点，无法取消点亮', 'warn'); return; }
   if (n.points > 0){ n.points--; state.talentPoints++; refreshAll(); } // 天赋点退回池中
 }
 
@@ -374,6 +384,7 @@ function spawnNode(preset){
     desc: base.desc || '',
     shape: 'rect',
     skip: 0,
+    autoUnlock: false,
     reqSkills: [],
     points: 0,
     x: snapGrid(r.width / 2 + dx),
@@ -667,7 +678,12 @@ function updateTooltip(p){
     parts.push(`<div class="tt-row">前置 ${items}</div>`);
   }
   const reason = blockReason(n);
-  parts.push(`<div class="tt-status" style="color:${reason ? '#ff8d7e' : '#ffd76b'}">${reason ? '🔒 ' + esc(reason) : '✔ 可点亮'}</div>`);
+  const status = n.autoUnlock
+    ? (n.points > 0
+        ? '✔ 已自动点亮（不耗天赋点）'
+        : '🔒 自动解锁：玩家等级达到 ' + n.reqLevel + ' 后自动点亮')
+    : (reason ? '🔒 ' + esc(reason) : '✔ 可点亮');
+  parts.push(`<div class="tt-status" style="color:${(n.autoUnlock ? n.points <= 0 : !!reason) ? '#ff8d7e' : '#ffd76b'}">${status}</div>`);
   tooltip.innerHTML = parts.join('');
   tooltip.style.display = 'block';
   const r = stage.getBoundingClientRect();
@@ -705,11 +721,15 @@ function refreshInspector(){
   inspReqLevel.value = n.reqLevel;
   inspMaxLevel.value = n.maxLevel;
   inspSkip.value = n.skip || 0;
+  inspAutoUnlock.checked = !!n.autoUnlock;
+  // 自动解锁节点不使用最大可点等级/跳级要求，字段置灰；也不可手动加减点
+  inspMaxLevel.disabled = !!n.autoUnlock;
+  inspSkip.disabled = !!n.autoUnlock;
   const reason = blockReason(n);
   inspPtsVal.textContent = `${n.points} / ${n.maxLevel}`;
   inspAdd.disabled = !!reason;
   inspAdd.title = reason || '点亮 1 级';
-  inspSub.disabled = n.points <= 0;
+  inspSub.disabled = n.points <= 0 || !!n.autoUnlock;
   // 前置列表 chips
   inspChips.innerHTML = '';
   if (!n.reqSkills.length){
@@ -777,6 +797,12 @@ inspShape.addEventListener('change', () => {
   const n = selNode(); if (!n) return;
   n.shape = inspShape.value === 'circle' ? 'circle' : 'rect';
   refreshJson();
+});
+inspAutoUnlock.addEventListener('change', () => {
+  const n = selNode(); if (!n) return;
+  n.autoUnlock = inspAutoUnlock.checked;
+  if (!n.autoUnlock) n.points = 0; // 取消自动解锁：系统点亮状态收回，回到普通手动节点
+  refreshAll(); // 勾选时按当前玩家等级立即点亮/熄灭
 });
 function clampInt(v, min, max, dft){
   v = parseInt(v, 10);
@@ -864,7 +890,7 @@ function exportData(){
     nodes: state.nodes.map(n => ({
       id: n.id, icon: n.icon, name: n.name, desc: n.desc,
       shape: n.shape || 'rect',
-      reqLevel: n.reqLevel, maxLevel: n.maxLevel, skip: n.skip || 0,
+      reqLevel: n.reqLevel, maxLevel: n.maxLevel, skip: n.skip || 0, autoUnlock: !!n.autoUnlock,
       reqSkills: [...n.reqSkills],
       x: Math.round(n.x), y: Math.round(n.y), points: n.points,
     })),
@@ -881,10 +907,19 @@ function refreshTooltipIfVisible(){
   if (tooltip.style.display !== 'none' && state.hoverId) updateTooltip(state.mouse);
 }
 function refreshAll(){
+  syncAutoNodes(); // 自动解锁节点随玩家等级即时点亮/熄灭（不耗天赋点）
   refreshHud();
   refreshInspector();
   refreshJson();
   refreshTooltipIfVisible();
+}
+// 自动解锁节点：忽略最大可点等级与跳级要求，等级达标即整体点亮，否则熄灭；不走天赋点池
+function syncAutoNodes(){
+  for (const n of state.nodes){
+    if (!n.autoUnlock) continue;
+    const target = state.playerLevel >= n.reqLevel ? n.maxLevel : 0;
+    if (n.points !== target) n.points = target;
+  }
 }
 
 document.getElementById('btnSave').addEventListener('click', () => {
@@ -931,6 +966,7 @@ function importData(text){
       reqLevel: clampInt(raw.reqLevel, 0, 99, 0),
       maxLevel: clampInt(raw.maxLevel, 1, 99, 1),
       skip: clampInt(raw.skip, 0, 99, 0),
+      autoUnlock: raw.autoUnlock === true,
       reqSkills: [...new Set(req)],
       x: snapGrid(Number.isFinite(+raw.x) ? +raw.x : r.width / 2 + ((i % 3) - 1) * 150),
       y: snapGrid(Number.isFinite(+raw.y) ? +raw.y : r.height / 2 + (Math.floor(i / 3) - 1) * 130),
@@ -964,15 +1000,21 @@ function seedDemo(){
     { id:'frost_nova',   name:'冰霜新星', desc:'以自身为中心释放冰爆。',       reqLevel:0, maxLevel:5, reqSkills:[],                 x:cx+150, y:cy-150 },
     { id:'ice_armor',    name:'寒冰护甲', desc:'被动：受击时冻结攻击者。',     reqLevel:3, maxLevel:5, reqSkills:['frost_nova'],     x:cx+150, y:cy+30 },
   ];
-  state.nodes = demo.map(n => ({ ...n, icon:'', points:0, shape:'rect', skip: n.skip || 0, x: snapGrid(n.x), y: snapGrid(n.y) }));
+  state.nodes = demo.map(n => ({ ...n, icon:'', points:0, shape:'rect', skip: n.skip || 0, autoUnlock: false, x: snapGrid(n.x), y: snapGrid(n.y) }));
   state.spawnCount = demo.length;
 }
 
 // ================= 启动 =================
-buildLibrary();
-seedDemo();
-resize();
-refreshAll();
+buildLibrary(); // 控件库不依赖画布尺寸
+(function boot(){
+  resize(); // 设置画布尺寸（顺带校验布局是否就绪）
+  if (stage.getBoundingClientRect().width < 1){
+    requestAnimationFrame(boot); // 视口未就绪（嵌入环境首帧布局为 0），等一帧重试
+    return;
+  }
+  seedDemo();
+  refreshAll();
+})();
 })();
 </script>
 </body>

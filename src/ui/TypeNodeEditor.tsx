@@ -14,15 +14,18 @@ function kindKey(node: TypeNode): string {
   return 'map'
 }
 
-/** 递归级联下拉：一级选 kind（标量/命名类型/array/map），容器类型展开子级编辑器 */
-export function TypeNodeEditor({ value, onChange, names, disabled }: TypeNodeEditorProps) {
+/** 递归级联下拉：一级选 kind（标量/命名类型/array/map），容器类型展开子级编辑器。
+ * asKey=true 时仅允许标量与命名引用——array/map 复合节点禁止做 map 键（裁决 2026-10-10）。 */
+export function TypeNodeEditor({ value, onChange, names, disabled, asKey = false }: TypeNodeEditorProps & { asKey?: boolean }) {
   const options = [
     { key: 'raw:string', label: 'string' },
     { key: 'raw:number', label: 'number' },
     { key: 'raw:boolean', label: 'boolean' },
     ...names.map(n => ({ key: `raw:${n}`, label: n })),
-    { key: 'array', label: 'array<…>' },
-    { key: 'map', label: 'map<…,…>' },
+    ...(asKey ? [] : [
+      { key: 'array', label: 'array<…>' },
+      { key: 'map', label: 'map<…,…>' },
+    ]),
   ]
   return (
     <div className="type-node-editor">
@@ -62,6 +65,7 @@ export function TypeNodeEditor({ value, onChange, names, disabled }: TypeNodeEdi
               onChange={k => onChange({ map: true, keyType: k, valueType: value.valueType })}
               names={names}
               disabled={disabled}
+              asKey
             />
           </div>
           <div className="type-node-child">

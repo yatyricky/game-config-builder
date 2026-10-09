@@ -24,6 +24,7 @@ MyProject/
 
 - 字段的 `type` 为递归节点：`{ "raw": "标量或类型名" }` | `{ "array": true, "elementType": <节点> }` | `{ "map": true, "keyType": <节点>, "valueType": <节点> }`，可无限嵌套（如 `map<string, array<map<string, array<number>>>>`）
 - raw 可引用标量（string/number/boolean）或任意命名类型；直接 struct 引用与递归引用（如树节点 `array<自身>`）合法，数据合法性由 JSON 本身承载
+- map 键不允许 array/map 复合类型；合法键集合 = 标量 + 命名引用。键的字符串化语义（2026-10-10）：string=自身、number=`String(n)`（如 "0"/"0.5"/"-16"）、boolean="true"/"false"、enum=枚举值字符串化（如 "6"）、struct=目标 pk 字符串化（如 "001"）
 - 旧的扁平写法（map/keyType/valueType/array/element 直接拍在字段上）已废弃，仅认 ADT 形态
 
 ```json schema/School.json

@@ -3,6 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { TypeDef, TypeNode, Project } from '../data/types.ts'
 import { typeNodeLabel } from '../data/types.ts'
 import { canDeleteType } from '../data/schemaEdit.ts'
+import { ConstraintIcons } from './constraintIcons.tsx'
 
 export interface SettingsActions {
   newType: () => void
@@ -383,14 +384,7 @@ export function SettingsModal({ project, projectName, actions, onClose }: Settin
                               <span className="er-row-name">{f.name}</span>
                               <span className="type-label">{typeNodeLabel(f.type)}</span>
                             </span>
-                            <span className="er-row-badges">
-                              {f.pk && <span className="attr">pk</span>}
-                              {f.index && !f.pk && <span className="attr">idx</span>}
-                              {f.unique && !(f.pk || f.index) && <span className="attr">uniq</span>}
-                              {f.nullable && <span className="attr">null</span>}
-                              {f.group && <span className="attr">grp</span>}
-                              {f.default !== undefined && <span className="attr">default={JSON.stringify(f.default)}</span>}
-                            </span>
+                            <ConstraintIcons field={f} />
                           </div>
                         ))}
                   </section>
