@@ -3,7 +3,6 @@ import { useCtrlHeld } from './useCtrlHeld.ts'
 
 interface TabBarProps {
   tables: string[]
-  /** 'schemas' 或表名 */
   selected: string
   onSelect: (tab: string) => void
   onNew: () => void
@@ -16,8 +15,8 @@ interface BadgeSpot {
   y: number
 }
 
-/** spec 底栏：Schemas(第 1 个 sheet) | 各表页签（横向 scroll view，滚动条 4px）| [+新建表格] 冻结最右。
- * 按住 Ctrl：快捷键徽记渲染在 fixed 覆盖层（测页签视口坐标定位）——与文档布局零关联，不占不挤任何高度。 */
+/** spec 底栏（2026-10-09 修订）：各表页签 + [+ 新建] 共享横向 scroll view（不冻结）。
+ * 按住 Ctrl：快捷键徽记渲染在 fixed 覆盖层（测页签视口坐标定位）——与文档布局零关联；页签数字 = Ctrl+1.. 对应各表。 */
 export function TabBar({ tables, selected, onSelect, onNew }: TabBarProps) {
   const ctrlHeld = useCtrlHeld()
   const btnRefs = useRef(new Map<string, HTMLButtonElement>())
@@ -41,8 +40,7 @@ export function TabBar({ tables, selected, onSelect, onNew }: TabBarProps) {
       const r = el.getBoundingClientRect()
       spots.push({ key, label, x: r.left + r.width / 2, y: r.top - 26 })
     }
-    measure('schemas', '1')
-    tables.forEach((name, i) => measure(name, String(i + 2)))
+    tables.forEach((name, i) => measure(name, String(i + 1)))
     measure('+new', 'M')
     setBadges(spots)
   }, [ctrlHeld, tables])
@@ -56,12 +54,11 @@ export function TabBar({ tables, selected, onSelect, onNew }: TabBarProps) {
   return (
     <div className="tabbar">
       <div className="tab-scroll">
-        {tab('schemas', 'Schemas')}
         {tables.map(name => tab(name, name))}
+        <button ref={setRef('+new')} className="tab-new" onClick={onNew} title="新建表格">
+          +
+        </button>
       </div>
-      <button ref={setRef('+new')} className="tab-new" onClick={onNew}>
-        +新建表格
-      </button>
       {badges.length > 0 && (
         <div className="kb-overlay">
           {badges.map(b => (

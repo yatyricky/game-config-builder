@@ -218,12 +218,8 @@ export function App() {
     exportCsv: (): void => pushNotice('info', '导出：NotImplemented（spec 待定义）'),
     newTable: (): void => pushNotice('info', '新建表格：NotImplemented（依赖 schema 编辑，spec 待定）'),
     selectSheet: (n: number): void => {
-      if (n === 1) {
-        setSelectedTab('schemas')
-        return
-      }
       const r = stateRef.current.result
-      const name = r?.project.tables[n - 2]?.name
+      const name = r?.project.tables[n - 1]?.name
       if (name) setSelectedTab(name)
     },
   })
@@ -233,12 +229,8 @@ export function App() {
     exportCsv: (): void => pushNotice('info', '导出：NotImplemented（spec 待定义）'),
     newTable: (): void => pushNotice('info', '新建表格：NotImplemented（依赖 schema 编辑，spec 待定）'),
     selectSheet: (n: number): void => {
-      if (n === 1) {
-        setSelectedTab('schemas')
-        return
-      }
       const r = stateRef.current.result
-      const name = r?.project.tables[n - 2]?.name
+      const name = r?.project.tables[n - 1]?.name
       if (name) setSelectedTab(name)
     },
   }
@@ -260,6 +252,9 @@ export function App() {
       } else if (key === 'm') {
         e.preventDefault()
         h.newTable()
+      } else if (key === ',') {
+        e.preventDefault()
+        setSelectedTab('schemas')
       } else if (/^[1-9]$/.test(e.key)) {
         e.preventDefault()
         h.selectSheet(Number(e.key))
@@ -285,6 +280,7 @@ export function App() {
         onReopen={id => void reopen(id)}
         onSave={saveNow}
         onExport={() => pushNotice('info', '导出：NotImplemented（spec 待定义）')}
+        onSchemas={() => setSelectedTab('schemas')}
       />
       <div className="content">
         {projectOpen ? (
