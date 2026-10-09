@@ -33,13 +33,6 @@
                 "raw": "number"
             },
             "default": 0
-        },
-        {
-            "name": "NewField",
-            "type": {
-                "raw": "string"
-            },
-            "nullable": true
         }
     ]
 }
