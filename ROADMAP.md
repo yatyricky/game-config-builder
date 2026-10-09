@@ -123,11 +123,11 @@
 
 ### M8a 类型系统 ADT 化 + 设置 Modal（只读卡片）
 
-- 范围：TypeNode IR + typeNodeLabel；解析器递归解析/引用校验（嵌套/递归/前向引用合法）；sample 与 SPECS 样例迁移；网格 string 判定与剪贴板类型标签切换；设置 modal（几乎占满工作表区、一类型一卡片只读、Esc/×/Ctrl+, 关闭）。
+- 范围：TypeNode IR + typeNodeLabel；解析器递归解析/引用校验（嵌套/递归/前向引用合法）；sample 与 SPECS 样例迁移；网格 string 判定与剪贴板类型标签切换；设置 modal = ER 卡片节点图（2026-10-10 裁决：连线仅 struct→struct 锚 pk 行、enum 不连线、无箭头；卡片拖拽、位置/缩放按目录名持久化、重置布局；Esc/×/Ctrl+, 关闭）。
 - 验收：
   - [ ] 三闸全绿（79 用例，含深嵌套/递归/嵌套悬空引用用例）
   - [ ] sample 渲染不回归（string 列照旧、ADT 列 NotImplemented、粘贴标签 map<Effect,number>）
-  - [ ] Ctrl+, / 设置按钮弹出 modal；卡片显示类型标签与 pk/default 徽记；关闭路径齐全；modal 开时网格键盘失效
+  - [ ] Ctrl+, / 设置按钮弹出 modal：ER 节点图（enum 无连线、Skills.Effects 连 Effect.ID pk 行）；拖拽卡片连线跟随；刷新后位置/缩放保持；重置布局回分层；关闭路径齐全；modal 开时网格键盘失效
   - [ ] selectedTab 仅表名（schemas 占位面板移除），Ctrl+1..9 = 各表
 - 任务卡：tasks/M8.md。
 

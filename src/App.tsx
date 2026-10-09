@@ -314,7 +314,7 @@ export function App() {
         />
       )}
       {settingsOpen && result && (
-        <SettingsModal project={result.project} onClose={() => setSettingsOpen(false)} />
+        <SettingsModal project={result.project} projectName={current?.name ?? ''} onClose={() => setSettingsOpen(false)} />
       )}
       <Notices items={notices} onClose={id => setNotices(xs => xs.filter(x => x.id !== id))} />
     </main>

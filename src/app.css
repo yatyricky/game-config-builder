@@ -275,7 +275,7 @@ body,
   transform: translateX(-50%);
 }
 
-/* 设置 modal：几乎占满工作表区，不占工作表逻辑（M8a 只读卡片） */
+/* 设置 modal：ER 卡片节点图（连线仅 struct→struct、enum 不连线；拖拽/持久化/缩放） */
 .settings-backdrop {
   position: fixed;
   inset: 0;
@@ -329,35 +329,98 @@ body,
   color: var(--color-danger);
 }
 
-.settings-body {
+/* 缩放控件 */
+.er-zoombar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  align-self: center;
+}
+
+.er-zoombar button {
+  font: inherit;
+  font-size: var(--text-sm);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-canvas);
+  cursor: pointer;
+}
+
+.er-zoombar button:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.zoom-value {
+  min-width: 44px;
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--color-fg-muted);
+}
+
+/* 画布：滚动平移 + 缩放盒 */
+.er-scroll {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-  gap: var(--space-3);
-  padding: var(--space-3);
-  align-content: start;
+  background: var(--color-inset);
+  user-select: none;
 }
 
-.settings-card {
-  border: 1px solid var(--color-border-muted);
+.er-zoom {
+  position: relative;
+}
+
+.er-canvas {
+  position: relative;
+}
+
+.er-edges {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.er-edges path {
+  fill: none;
+  stroke: var(--color-fg-muted);
+  stroke-opacity: 0.55;
+  stroke-width: 1.5;
+}
+
+/* 卡片：行高/表头高须与 SettingsModal.tsx 的 ROW_H / HEADER_H 常量一致 */
+.er-card {
+  position: absolute;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-canvas);
+  box-shadow: 0 1px 3px rgba(140, 149, 159, 0.15);
   overflow: hidden;
+  cursor: grab;
+  touch-action: none;
 }
 
-.card-head {
+.er-card:active,
+.er-card.dragging {
+  cursor: grabbing;
+  box-shadow: var(--shadow-card);
+}
+
+.er-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  height: 36px;
+  padding: 0 var(--space-3);
   background: var(--color-subtle);
   border-bottom: 1px solid var(--color-border-muted);
 }
 
 .card-name {
   font-weight: 600;
+  font-size: var(--text-sm);
 }
 
 .card-kind {
@@ -365,63 +428,39 @@ body,
   font-size: var(--text-xs);
 }
 
-.card-fields {
-  width: 100%;
-  border-collapse: collapse;
+.er-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  height: 30px;
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--color-border-muted);
   font-size: var(--text-sm);
 }
 
-.card-fields th {
-  text-align: left;
-  color: var(--color-fg-muted);
-  font-weight: 500;
-  font-size: var(--text-xs);
-  padding: var(--space-1) var(--space-3);
-  border-bottom: 1px solid var(--color-border-muted);
-}
-
-.card-fields td {
-  padding: var(--space-1) var(--space-3);
-  border-bottom: 1px solid var(--color-border-muted);
-}
-
-.card-fields tr:last-child td {
+.er-row:last-child {
   border-bottom: none;
+}
+
+.er-row em {
+  color: var(--color-fg-muted);
+  font-style: normal;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: var(--text-xs);
+}
+
+.pk-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  margin-right: 6px;
 }
 
 .type-label {
   font-family: ui-monospace, Consolas, monospace;
   font-size: var(--text-xs);
   color: var(--color-accent);
-}
-
-.field-attrs {
-  display: flex;
-  gap: var(--space-1);
-}
-
-.attr {
-  font-size: var(--text-xs);
-  padding: 0 var(--space-1);
-  border: 1px solid var(--color-border-muted);
-  border-radius: 4px;
-  color: var(--color-fg-muted);
-}
-
-.card-enum {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-}
-
-.enum-member {
-  font-size: var(--text-sm);
-}
-
-.enum-member em {
-  color: var(--color-fg-muted);
-  font-style: normal;
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: var(--text-xs);
 }
