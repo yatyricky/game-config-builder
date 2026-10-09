@@ -56,8 +56,9 @@ export function FieldEditModal({ def, field, project, onSave, onDelete, onClose 
   const scalarKind = isScalar && 'raw' in type ? type.raw : null
 
   // 校验
+  const usedLocked = originalName !== null && !canEditFieldType(rows, originalName)
   const nameError = validateFieldName(name, def, originalName) ?? (name !== originalName && rows.some(r => r[name] !== undefined) ? `「${name}」已存在于表格数据中，改名会导致合并污染` : null)
-  const typeLocked = originalName !== null && !canEditFieldType(rows, originalName)
+  const typeLocked = usedLocked
   const pseudo: FieldDef = { name, type }
   const pkLock = pkLockState(def, pseudo, project)
   // 已是 pk 的字段：锁定即不可取消；非 pk 字段：锁定即不可勾选（同一 disabled 语义）
@@ -67,8 +68,11 @@ export function FieldEditModal({ def, field, project, onSave, onDelete, onClose 
   const uniqueChecked = indexChecked || unique
   const uniqueDisabled = indexChecked
   const lockReasons: string[] = []
-  if (typeLocked) lockReasons.push('字段已被表格数据使用：类型锁定，删除亦不可用（先清空该列数据可解锁）')
-  if (pkLock.locked && pkLock.reason) lockReasons.push(pkLock.reason)
+  if (usedLocked) {
+    lockReasons.push('字段已被表格数据使用：名称与类型锁定，删除不可用（先清空该列数据可解锁）')
+  } else if (pkLock.locked && pkLock.reason) {
+    lockReasons.push(pkLock.reason)
+  }
 
   let defaultError: string | null = null
   if (hasDefault && scalarKind === 'number' && (defaultStr.trim() === '' || !Number.isFinite(Number(defaultStr)))) {
@@ -106,7 +110,14 @@ export function FieldEditModal({ def, field, project, onSave, onDelete, onClose 
         <div className="form-modal-body">
           <label className="form-row">
             <span className="form-label">字段名称</span>
-            <input ref={nameRef} className={nameError ? 'invalid' : ''} value={name} onChange={e => setName(e.target.value)} />
+            <input
+              ref={nameRef}
+              className={nameError ? 'invalid' : ''}
+              value={name}
+              disabled={usedLocked}
+              title={usedLocked ? '字段已被表格数据使用，名称不可修改' : undefined}
+              onChange={e => setName(e.target.value)}
+            />
             {nameError && <em className="form-error">{nameError}</em>}
           </label>
           <label className="form-row">
