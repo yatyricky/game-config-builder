@@ -66,6 +66,10 @@ export function FieldEditModal({ def, field, project, onSave, onDelete, onClose 
   const indexDisabled = pk
   const uniqueChecked = indexChecked || unique
   const uniqueDisabled = indexChecked
+  const lockReasons: string[] = []
+  if (typeLocked) lockReasons.push('字段已被表格数据使用：类型锁定，删除亦不可用（先清空该列数据可解锁）')
+  if (pkLock.locked && pkLock.reason) lockReasons.push(pkLock.reason)
+
   let defaultError: string | null = null
   if (hasDefault && scalarKind === 'number' && (defaultStr.trim() === '' || !Number.isFinite(Number(defaultStr)))) {
     defaultError = 'number 默认值必须填写且为数字'
@@ -118,7 +122,7 @@ export function FieldEditModal({ def, field, project, onSave, onDelete, onClose 
                 names={selectableNames(project, def.name)}
                 disabled={typeLocked}
               />
-              {typeLocked && <em className="form-hint">字段已被表格数据使用，类型锁定（先清空该列数据可解锁）</em>}
+
             </div>
           </div>
           <div className="form-row">
@@ -169,9 +173,15 @@ export function FieldEditModal({ def, field, project, onSave, onDelete, onClose 
                 <input type="checkbox" checked={group} onChange={e => setGroup(e.target.checked)} /> group
               </label>
             </div>
-            {pkLock.locked && <em className="form-hint">{pkLock.reason}</em>}
           </div>
         </div>
+        {lockReasons.length > 0 && (
+          <div className="form-lock-bar">
+            {lockReasons.map(r => (
+              <div key={r}>{r}</div>
+            ))}
+          </div>
+        )}
         <footer className="form-modal-foot">
           {originalName !== null && (
             <button

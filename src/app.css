@@ -768,3 +768,15 @@ body,
 .type-node-child .type-node-editor {
   flex: 1;
 }
+
+/* modal 底部锁定原因提示条：独立于表单行布局 */
+.form-lock-bar {
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px dashed var(--color-border);
+  background: var(--color-subtle);
+  color: var(--color-attention);
+  font-size: var(--text-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

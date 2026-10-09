@@ -39,7 +39,6 @@ export function EnumCardModal({ def, isUsed, onSave, onClose }: EnumCardModalPro
               title={isUsed ? '已被其他类型引用，名称不可修改' : undefined}
               onChange={e => setName(e.target.value)}
             />
-            {isUsed && <em className="form-hint">已被其他类型引用，名称不可修改</em>}
           </label>
           <div className="form-row">
             <span className="form-label">flags</span>
@@ -48,6 +47,7 @@ export function EnumCardModal({ def, isUsed, onSave, onClose }: EnumCardModalPro
             </label>
           </div>
         </div>
+        {isUsed && <div className="form-lock-bar">已被其他类型引用，名称不可修改</div>}
         <footer className="form-modal-foot">
           <span className="spacer" />
           <button onClick={onClose}>取消</button>
