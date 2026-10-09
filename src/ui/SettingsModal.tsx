@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import type { TypeDef, TypeNode, Project } from '../data/types.ts'
+import type { FieldDef, TypeDef, TypeNode, Project } from '../data/types.ts'
 import { typeNodeLabel } from '../data/types.ts'
 import { canDeleteType } from '../data/schemaEdit.ts'
 import { ConstraintIcons } from './constraintIcons.tsx'
