@@ -49,7 +49,7 @@ export function TopBar({ current, recents, isDirty, onOpen, onReopen, onSave, on
       <HotButton label="打开" hotkey="O" onClick={onOpen} />
       <HotButton label={isDirty ? '保存 *' : '保存'} hotkey="S" onClick={onSave} disabled={!current} />
       <HotButton label="导出" hotkey="E" onClick={onExport} disabled={!current} />
-      <HotButton label="Schemas" hotkey="," onClick={onSchemas} disabled={!current} />
+      <HotButton label="设置" hotkey="," onClick={onSchemas} disabled={!current} />
     </div>
   )
 }

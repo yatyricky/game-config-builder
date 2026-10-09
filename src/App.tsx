@@ -297,7 +297,7 @@ export function App() {
             </div>
           ) : (
             <p className="placeholder">
-              {selectedTab === 'schemas' ? 'Schemas：schema 编辑待定（spec）' : `表格 ${selectedTab} 缺少对应的 struct 类型`}
+              {selectedTab === 'schemas' ? '设置：schema 编辑待定（spec）' : `表格 ${selectedTab} 缺少对应的 struct 类型`}
             </p>
           )
         ) : (

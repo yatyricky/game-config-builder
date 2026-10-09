@@ -1,3 +1,6 @@
 {"ID":"001","Name":"Damage","FuncName":"EffectDamage","Priority":1}
 {"ID":"002","Name":"Heal","FuncName":"EffectHeal","Priority":5}
 {"ID":"003","Name":"Blob","FuncName":"EffectStun","Priority":9}
+{"Name":"xx","ID":"004","FuncName":"blob"}
+{"Name":"信息","ID":"005","FuncName":"glos"}
+{"Name":"才司机","ID":"006","FuncName":"flop"}
