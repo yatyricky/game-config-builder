@@ -60,6 +60,10 @@ export function parseSchemas(files: SchemaFileInput[]): SchemaParseResult {
       }
       checkRef(f.type, file, at)
     }
+    // 裁决 2026-10-10：struct 必须有 pk——无 pk 不可被表格使用、不可被其他节点引用
+    if (!def.fields.some(f => f.pk)) {
+      issues.push({ file, at: def.name, message: `struct ${def.name} 缺少 pk 字段` })
+    }
   }
 
   return { types, issues }
@@ -89,9 +93,29 @@ function toTypeDef(file: string, json: unknown, issues: ValidationIssue[]): Type
       return null
     }
     const members = []
+    const seenName = new Set<string>()
+    const seenDisplayName = new Set<string>()
+    const seenValue = new Set<number>()
     for (const m of enums) {
       if (isObj(m) && typeof m['name'] === 'string' && typeof m['value'] === 'number') {
-        members.push({ name: m['name'], value: m['value'] })
+        const dn = typeof m['displayName'] === 'string' ? m['displayName'] : undefined
+        // 裁决 2026-10-10：成员 name/displayName/value 三重唯一
+        if (seenName.has(m['name'])) {
+          issues.push({ file, message: `枚举 ${name} 成员名重复：${m['name']}` })
+          return null
+        }
+        if (dn !== undefined && dn !== '' && seenDisplayName.has(dn)) {
+          issues.push({ file, message: `枚举 ${name} 成员 displayName 重复：${dn}` })
+          return null
+        }
+        if (seenValue.has(m['value'])) {
+          issues.push({ file, message: `枚举 ${name} 成员值重复：${m['value']}` })
+          return null
+        }
+        seenName.add(m['name'])
+        if (dn !== undefined && dn !== '') seenDisplayName.add(dn)
+        seenValue.add(m['value'])
+        members.push(dn !== undefined ? { name: m['name'], value: m['value'], displayName: dn } : { name: m['name'], value: m['value'] })
       } else {
         issues.push({ file, message: `枚举 ${name} 的成员必须是 { name: string, value: number }` })
         return null
@@ -116,8 +140,12 @@ function toTypeDef(file: string, json: unknown, issues: ValidationIssue[]): Type
     if (!type) continue
     const f: FieldDef = { name: fj['name'], type }
     if (fj['pk'] === true) f.pk = true
+    if (fj['index'] === true) f.index = true
+    if (fj['unique'] === true) f.unique = true
+    if (fj['nullable'] === true) f.nullable = true
     if (typeof fj['displayName'] === 'string') f.displayName = fj['displayName']
     if ('default' in fj) f.default = fj['default']
+    if (fj['group'] === true) f.group = true
     fields.push(f)
   }
   const def: StructDef = { kind, name, fields }

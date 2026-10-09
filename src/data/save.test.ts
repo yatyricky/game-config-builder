@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { compactRows, isEmptyRecord, tableToJSONL, validateRows } from './save.ts'
+import { compactRows, isEmptyRecord, tableToJSONL, validateRows, validateUniqueness } from './save.ts'
 import type { StructDef, TableRow } from './types.ts'
 
 const def: StructDef = {
@@ -67,4 +67,33 @@ test('裁决：字符串 trim 后全空的记录保存时删除', () => {
   const next = compactRows(rows)
   assert.equal(next.length, 1)
   assert.equal(next[0].ID, '001')
+})
+
+test('validateUniqueness：pk/unique 非空值重复报出，空值不查（裁决 2026-10-10）', () => {
+  const uniqDef: StructDef = {
+    kind: 'struct',
+    name: 'U',
+    fields: [
+      { name: 'ID', type: { raw: 'string' }, pk: true },
+      { name: 'Code', type: { raw: 'string' }, unique: true },
+      { name: 'N', type: { raw: 'number' } },
+    ],
+  }
+  const rows: TableRow[] = [
+    { ID: '1', Code: 'a', N: 0 },
+    { ID: '1', Code: 'b' },
+    { ID: '', Code: 'b' },
+    {},
+  ]
+  const issues = validateUniqueness(uniqDef, rows)
+  assert.equal(issues.length, 2)
+  const id = issues.find(i => i.field === 'ID')
+  assert.deepEqual(id?.rows, [1, 2])
+  const code = issues.find(i => i.field === 'Code')
+  assert.deepEqual(code?.rows, [2, 3])
+})
+
+test('validateUniqueness：全唯一返回空', () => {
+  const rows: TableRow[] = [{ ID: '1' }, { ID: '2' }]
+  assert.deepEqual(validateUniqueness(def, rows), [])
 })

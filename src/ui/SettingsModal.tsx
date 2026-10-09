@@ -2,11 +2,23 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { TypeDef, TypeNode, Project } from '../data/types.ts'
 import { typeNodeLabel } from '../data/types.ts'
+import { canDeleteType } from '../data/schemaEdit.ts'
+
+export interface SettingsActions {
+  newType: () => void
+  deleteType: (name: string) => void
+  /** fieldName=null 表示新增 */
+  editField: (typeName: string, fieldName: string | null) => void
+  /** memberName=null 表示新增 */
+  editMember: (enumName: string, memberName: string | null) => void
+  editEnumCard: (enumName: string) => void
+}
 
 interface SettingsModalProps {
   project: Project
   /** 工程目录名——布局持久化的 key（FSA 唯一稳定标识；同名目录共享布局） */
   projectName: string
+  actions: SettingsActions
   onClose: () => void
 }
 
@@ -139,7 +151,7 @@ function rowCountOf(def: TypeDef): number {
  * （enum 不连线；仅简单连线无箭头）。卡片可拖拽，位置与缩放按工程目录名持久化；分层布局作缺省。
  * 编辑与显式保存属 M8b。
  */
-export function SettingsModal({ project, projectName, onClose }: SettingsModalProps) {
+export function SettingsModal({ project, projectName, actions, onClose }: SettingsModalProps) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const [geo] = useState(() => {
     const m = new Map<string, CardGeo>()
@@ -172,15 +184,22 @@ export function SettingsModal({ project, projectName, onClose }: SettingsModalPr
 
   useEffect(() => {
     closeRef.current?.focus()
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onClose()
+  }, [])
+
+  // 编辑期间新建的类型补缺省位置（编辑器在 modal 开着时落盘新类型）
+  useEffect(() => {
+    setPositions(prev => {
+      let changed = false
+      const next = new Map(prev)
+      for (const name of project.types.keys()) {
+        if (!next.has(name)) {
+          next.set(name, { x: PAD + (next.size % 3) * (CARD_W + H_GAP), y: PAD + Math.floor(next.size / 3) * 240 })
+          changed = true
+        }
       }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+      return changed ? next : prev
+    })
+  }, [project.types])
 
   const persist = (nextPos: Map<string, Pos>, nextZoom: number): void => {
     setPositions(nextPos)
@@ -281,8 +300,9 @@ export function SettingsModal({ project, projectName, onClose }: SettingsModalPr
       <div className="settings-modal" onClick={e => e.stopPropagation()} role="dialog" aria-label="设置">
         <header className="settings-header">
           <span className="settings-title">设置</span>
-          <span className="settings-sub">类型关系图（连线 = 字段引用 → 目标类型 pk；编辑属下一期）</span>
+          <span className="settings-sub">类型关系图（连线 = 字段引用 → 目标类型 pk；点击字段行编辑）</span>
           <span className="er-zoombar">
+            <button onClick={actions.newType}>添加卡片</button>
             <button onClick={() => setZoomTo(zoom - ZOOM_STEP)} aria-label="缩小">−</button>
             <span className="zoom-value">{Math.round(zoom * 100)}%</span>
             <button onClick={() => setZoomTo(zoom + ZOOM_STEP)} aria-label="放大">＋</button>
@@ -302,38 +322,73 @@ export function SettingsModal({ project, projectName, onClose }: SettingsModalPr
                 const g = geo.get(name)
                 if (!g) return null
                 const d = g.def
+                const deletable = canDeleteType(project, name)
+                const stop = (e: ReactPointerEvent<HTMLElement>): void => e.stopPropagation()
                 return (
                   <section
                     key={name}
-                    className={`er-card${drag?.name === name ? ' dragging' : ''}`}
+                    className={`er-card${drag?.name === name ? ' dragging' : ''}${d.kind === 'struct' && !d.fields.some(f => f.pk) ? ' no-pk' : ''}`}
                     style={{ left: p.x, top: p.y, width: g.w }}
-                    onPointerDown={onCardDown(name)}
-                    onPointerMove={onCardMove}
-                    onPointerUp={onCardUp}
-                    onPointerCancel={onCardUp}
                   >
-                    <header className="er-head">
-                      <span className="card-name">{name}</span>
-                      <span className="card-kind">
-                        {d.kind === 'enum' ? 'enum' : 'struct'}
-                        {d.kind === 'enum' && d.flags ? ' · flags' : ''}
+                    <header
+                      className="er-head"
+                      onPointerDown={onCardDown(name)}
+                      onPointerMove={onCardMove}
+                      onPointerUp={onCardUp}
+                      onPointerCancel={onCardUp}
+                    >
+                      <span className="er-head-main">
+                        <span className="card-name">{name}</span>
+                        <span className="card-kind">
+                          {d.kind === 'enum' ? 'enum' : 'struct'}
+                          {d.kind === 'enum' && d.flags ? ' · flags' : ''}
+                        </span>
+                      </span>
+                      <span className="er-head-actions">
+                        {d.kind === 'enum' && (
+                          <button className="er-icon-btn" title="编辑卡片" onPointerDown={stop} onClick={() => actions.editEnumCard(name)}>
+                            ✎
+                          </button>
+                        )}
+                        <button
+                          className="er-icon-btn"
+                          title={d.kind === 'enum' ? '新增成员' : '新增字段'}
+                          onPointerDown={stop}
+                          onClick={() => (d.kind === 'enum' ? actions.editMember(name, null) : actions.editField(name, null))}
+                        >
+                          ＋
+                        </button>
+                        {deletable && (
+                          <button className="er-icon-btn danger" title="删除类型（无引用、无数据）" onPointerDown={stop} onClick={() => actions.deleteType(name)}>
+                            🗑
+                          </button>
+                        )}
                       </span>
                     </header>
                     {d.kind === 'enum'
                       ? d.members.map(m => (
-                          <div key={m.name} className="er-row">
-                            <span>{m.name}</span>
-                            <em>{m.value}</em>
+                          <div key={m.name} className="er-row clickable" onClick={() => actions.editMember(name, m.name)}>
+                            <span className="er-row-main">
+                              <span className="er-row-name">{m.name}</span>
+                              {m.displayName && <span className="type-label">{m.displayName}</span>}
+                            </span>
+                            <span className="er-row-badges">
+                              <span className="attr">{m.value}</span>
+                            </span>
                           </div>
                         ))
                       : d.fields.map(f => (
-                          <div key={f.name} className="er-row">
+                          <div key={f.name} className="er-row clickable" onClick={() => actions.editField(name, f.name)}>
                             <span className="er-row-main">
                               <span className="er-row-name">{f.name}</span>
                               <span className="type-label">{typeNodeLabel(f.type)}</span>
                             </span>
                             <span className="er-row-badges">
                               {f.pk && <span className="attr">pk</span>}
+                              {f.index && !f.pk && <span className="attr">idx</span>}
+                              {f.unique && !(f.pk || f.index) && <span className="attr">uniq</span>}
+                              {f.nullable && <span className="attr">null</span>}
+                              {f.group && <span className="attr">grp</span>}
                               {f.default !== undefined && <span className="attr">default={JSON.stringify(f.default)}</span>}
                             </span>
                           </div>

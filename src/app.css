@@ -397,8 +397,13 @@ body,
   background: var(--color-canvas);
   box-shadow: 0 1px 3px rgba(140, 149, 159, 0.15);
   overflow: hidden;
-  cursor: grab;
   touch-action: none;
+}
+
+/* struct 缺 pk：红边错误态（不可被表格使用、不可被引用） */
+.er-card.no-pk {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 1px var(--color-danger);
 }
 
 .er-card:active,
@@ -407,15 +412,57 @@ body,
   box-shadow: var(--shadow-card);
 }
 
+/* 标题栏：名称+kind 左对齐（与字段行同排布）；右侧按钮组；拖拽仅经标题栏 */
 .er-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
   height: 36px;
-  padding: 0 var(--space-3);
+  padding: 0 var(--space-2) 0 var(--space-3);
   background: var(--color-subtle);
   border-bottom: 1px solid var(--color-border-muted);
+  cursor: grab;
+}
+
+.er-head:active {
+  cursor: grabbing;
+}
+
+.er-head-main {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.er-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+
+.er-icon-btn {
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--color-fg-muted);
+}
+
+.er-icon-btn:hover {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+
+.er-icon-btn.danger:hover {
+  background: var(--color-danger-subtle);
+  color: var(--color-danger);
 }
 
 .card-name {
@@ -437,6 +484,16 @@ body,
   padding: 0 var(--space-3);
   border-bottom: 1px solid var(--color-border-muted);
   font-size: var(--text-sm);
+}
+
+/* 字段/成员行：悬停浮起 + 指针，点击编辑 */
+.er-row.clickable {
+  cursor: pointer;
+}
+
+.er-row.clickable:hover {
+  background: var(--color-accent-subtle);
+  box-shadow: inset 2px 0 0 var(--color-accent);
 }
 
 /* 字段名 + 类型左对齐相邻（字体字号颜色不变）；徽记右对齐 */
@@ -485,4 +542,229 @@ body,
   font-family: ui-monospace, Consolas, monospace;
   font-size: var(--text-xs);
   color: var(--color-accent);
+}
+
+/* 表单弹窗（字段/成员/卡片/新建类型）与二次确认 */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(31, 35, 40, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 90;
+}
+
+.modal-backdrop.confirm-layer {
+  z-index: 100;
+}
+
+.form-modal {
+  width: 440px;
+  max-width: calc(100vw - 64px);
+  max-height: calc(100vh - 96px);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.form-modal.wide {
+  width: 560px;
+}
+
+.form-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-subtle);
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.form-close {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--color-fg-muted);
+  padding: 0 var(--space-1);
+}
+
+.form-close:hover {
+  color: var(--color-danger);
+}
+
+.form-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.form-modal-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-subtle);
+}
+
+.form-modal-foot button {
+  font: inherit;
+  font-size: var(--text-sm);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-canvas);
+  cursor: pointer;
+}
+
+.form-modal-foot button.primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+}
+
+.form-modal-foot button.danger {
+  color: var(--color-danger);
+}
+
+.form-modal-foot button.danger:hover:not(:disabled) {
+  background: var(--color-danger-subtle);
+}
+
+.form-modal-foot button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: var(--space-2) var(--space-2);
+  align-items: start;
+}
+
+.form-label {
+  font-size: var(--text-sm);
+  color: var(--color-fg-muted);
+  padding-top: 5px;
+  text-align: right;
+}
+
+.form-control {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.form-row input[type='text'],
+.form-row input:not([type]),
+.form-row select {
+  font: inherit;
+  font-size: var(--text-sm);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-canvas);
+  color: var(--color-fg);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-row input.invalid {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 1px var(--color-danger);
+}
+
+.form-row input:disabled {
+  background: var(--color-inset);
+  color: var(--color-fg-muted);
+}
+
+.form-error {
+  color: var(--color-danger);
+  font-style: normal;
+  font-size: var(--text-xs);
+}
+
+.form-hint {
+  color: var(--color-fg-muted);
+  font-style: normal;
+  font-size: var(--text-xs);
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.check-group {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.confirm-message {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* 类型树级联下拉 */
+.type-node-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.type-node-editor > select {
+  font: inherit;
+  font-size: var(--text-sm);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-canvas);
+}
+
+.type-node-editor > select:disabled {
+  background: var(--color-inset);
+  color: var(--color-fg-muted);
+}
+
+.type-node-child {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-left: var(--space-4);
+}
+
+.type-node-label {
+  font-size: var(--text-xs);
+  color: var(--color-fg-muted);
+  flex: none;
+}
+
+.type-node-child .type-node-editor {
+  flex: 1;
 }

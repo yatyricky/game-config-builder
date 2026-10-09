@@ -12,9 +12,9 @@ export function applyCellEdit(rows: readonly TableRow[], rowIndex: number, field
   return next
 }
 
-/** 必填字段：无 default 属性的字段（spec 2026-10-08 增补） */
+/** 必填字段：无 default 且未勾选 nullable（裁决 2026-10-10：nullable 允许不填） */
 export function requiredFields(def: StructDef): FieldDef[] {
-  return def.fields.filter(f => f.default === undefined)
+  return def.fields.filter(f => f.default === undefined && f.nullable !== true)
 }
 
 /** 必填缺失判定：undefined/null/trim 后空串（裁决 2026-10-08：空白串不绕过校验） */

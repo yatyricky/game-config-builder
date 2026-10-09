@@ -221,6 +221,18 @@ oooooo
 - 进入编辑模式前清除剪切板（线框随之消失）
 - 粘贴目标选区不允许与复制源有交集：有交集时报错并阻断
 
+#### 类型编辑（2026-10-10 裁决，M8b-1）
+
+- 卡片标题栏与字段行同排布（名称+kind 左对齐）；右侧从右至左：垃圾桶（无引用且无数据时出现）、加号（新增字段/成员）、写字图标（enum 卡片编辑：名称无引用可改；flags 被使用且值非 2^n 序列时不可勾选，否则自由切换）
+- 新建类型（画布标题栏按钮）：名称 + struct/enum 下拉（默认 struct）+ enum→flags checkbox；空/重复/与 js 基础类型冲突 → 红框无法保存；确认后二次确认弹窗（名称难改）；struct 自动带 ID（pk、raw:string）
+- 字段编辑弹窗：名称（非空 trim、卡内重名红框、不得与数据键冲突）；displayName（任意类型可选，仅显示在表头）；default 仅基础类型（string 空=空串永 trim / number 必填 / boolean 下拉默认 false；array/map 隐式 []/{} 不物化）；类型树=递归级联下拉（命名可选集=enum+有 pk 的 struct+自身），字段已被数据使用→整树只读
+- 约束链：pk（已有其他 pk / 非 raw:string / 被引用或存在同名表 → disabled）→ index 强制 → unique 强制；nullable 勾选允许不填（必填=无 default 且未 nullable）；group 纯元数据
+- struct 无 pk → 卡片红边、解析器 issue、不可被引用、不可被表格使用
+- 枚举成员：name/displayName/value 三重唯一（红框+解析器 issue）；新增值 flags 自动=前值×2（首=1）、非 flags 建议=前值+1（首=0）；flags 成员 ≥30 无法新增；成员值被表数据使用 → 删除禁用
+- 删除规则：字段被数据使用不可删；类型删除=删 schema 文件（+struct 空表文件）
+- 保存：字段/成员编辑显式写盘 schema/<Type>.json（改名级联数据键并连写数据文件）；新增字段/成员/类型均二次确认
+- pk/unique 字段保存表数据时查重，重复阻止保存（G5 遗留落定）
+
 ### 带前面样例数据的渲染大致如下
 
 ||ID|Name|School|Effects|LvlReq|

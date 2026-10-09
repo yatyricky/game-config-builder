@@ -65,3 +65,19 @@ test('必填缺失：trim 空串算缺失', () => {
   assert.equal(issues.length, 1)
   assert.equal(issues[0].name, 'ID')
 })
+
+test('nullable 字段不算必填（裁决 2026-10-10）', () => {
+  const d: StructDef = {
+    kind: 'struct',
+    name: 'T',
+    fields: [
+      { name: 'ID', type: { raw: 'string' }, pk: true },
+      { name: 'Note', type: { raw: 'string' }, nullable: true },
+      { name: 'Tag', type: { raw: 'string' } },
+    ],
+  }
+  const req = requiredFields(d).map(f => f.name)
+  assert.deepEqual(req, ['ID', 'Tag'])
+  const row: TableRow = { ID: '1', Tag: 'x' }
+  assert.equal(missingRequired(d, row).length, 0)
+})

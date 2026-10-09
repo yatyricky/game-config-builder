@@ -33,6 +33,7 @@ export function isStringType(node: TypeNode): boolean {
 export interface EnumMember {
   name: string
   value: number
+  displayName?: string
 }
 
 export interface EnumDef {
@@ -46,9 +47,17 @@ export interface FieldDef {
   name: string
   type: TypeNode
   pk?: boolean
+  /** 查询索引元数据（pk 强制勾选）；无运行时行为（裁决 2026-10-10） */
+  index?: boolean
+  /** 唯一性约束：index/pk 强制勾选；保存数据时查重阻止（裁决 2026-10-10） */
+  unique?: boolean
+  /** 勾选后允许不填（裁决 2026-10-10：必填 = 无 default 且未 nullable） */
+  nullable?: boolean
   displayName?: string
-  /** spec（2026-10-08 增补）：可带 default 属性；无 default 即必填（required） */
+  /** spec（2026-10-08 增补）：可带 default 属性 */
   default?: unknown
+  /** 分组标记，纯元数据（裁决 2026-10-10） */
+  group?: boolean
 }
 
 export interface StructDef {

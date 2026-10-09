@@ -45,3 +45,8 @@ export async function fsaWriteFile(root: FileSystemDirectoryHandle, fileName: st
   await writable.write(content)
   await writable.close()
 }
+
+/** 删除工程根下的一个文件（类型删除/改名用；需 readwrite 授权） */
+export async function fsaDeleteFile(root: FileSystemDirectoryHandle, fileName: string): Promise<void> {
+  await root.removeEntry(fileName)
+}
