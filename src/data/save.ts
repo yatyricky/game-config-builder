@@ -1,4 +1,4 @@
-import type { StructDef, TableRow } from './types.ts'
+import type { Project, StructDef, TableRow } from './types.ts'
 import { missingRequired } from './edit.ts'
 
 /** 空记录（裁决 2026-10-08）：所有值 undefined 或字符串 trim 后为空——保存时自动删除 */
@@ -54,6 +54,44 @@ export function validateUniqueness(def: StructDef, rows: readonly TableRow[]): U
     }
   }
   return out
+}
+
+export interface TableViolation {
+  table: string
+  missing: SaveIssue[]
+  duplicates: UniquenessIssue[]
+}
+
+/** 单表全量校验：必填缺失 + pk/unique 查重；两项皆空返回 null */
+export function tableViolations(name: string, def: StructDef, rows: readonly TableRow[]): TableViolation | null {
+  const missing = validateRows(def, rows)
+  const duplicates = validateUniqueness(def, rows)
+  if (missing.length === 0 && duplicates.length === 0) return null
+  return { table: name, missing, duplicates }
+}
+
+/** 全工程校验：逐表聚合；enum 或缺类型的表跳过 */
+export function projectViolations(project: Project): TableViolation[] {
+  const out: TableViolation[] = []
+  for (const t of project.tables) {
+    const def = project.types.get(t.name)
+    if (!def || def.kind !== 'struct') continue
+    const v = tableViolations(t.name, def, t.rows)
+    if (v) out.push(v)
+  }
+  return out
+}
+
+/** 首条缺必填 + 「 等 N 行」后缀；表名前缀由调用方自行拼 */
+export function formatMissingSummary(issues: SaveIssue[]): string {
+  const first = issues[0]
+  const more = issues.length > 1 ? ` 等 ${issues.length} 行` : ''
+  return `第 ${first.row} 行缺少必填：${first.missing.join('、')}${more}`
+}
+
+/** 单条查重文案 */
+export function formatDuplicateIssue(u: UniquenessIssue): string {
+  return `字段 ${u.field} 的值 ${JSON.stringify(u.value)} 在第 ${u.rows.join('、')} 行重复`
 }
 
 /** JSONL 序列化：每记录一行 JSON，尾随换行；空表为空串 */

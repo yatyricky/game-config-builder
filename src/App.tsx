@@ -3,7 +3,14 @@ import { loadProject } from './data/loader.ts'
 import type { LoadResult } from './data/loader.ts'
 import { fsaDeleteFile, fsaSource, fsaWriteFile } from './data/dirSource.ts'
 import { applyCellEdit } from './data/edit.ts'
-import { compactRows, tableToJSONL, validateRows, validateUniqueness } from './data/save.ts'
+import {
+  compactRows,
+  formatDuplicateIssue,
+  formatMissingSummary,
+  projectViolations,
+  tableToJSONL,
+  tableViolations,
+} from './data/save.ts'
 import {
   addField,
   addMember,
@@ -85,21 +92,16 @@ export function App() {
       const def = r.project.types.get(name)
       const table = r.project.tables.find(t => t.name === name)
       if (!def || def.kind !== 'struct' || !table) continue
-      const issues = validateRows(def, table.rows)
-      if (issues.length > 0) {
+      const v = tableViolations(name, def, table.rows)
+      if (!v) continue
+      if (v.missing.length > 0) {
         if (silent) return
-        const first = issues[0]
-        const more = issues.length > 1 ? ` 等 ${issues.length} 行` : ''
-        pushNotice('error', `无法保存「${name}」第 ${first.row} 行缺少必填：${first.missing.join('、')}${more}`)
+        pushNotice('error', `无法保存「${name}」${formatMissingSummary(v.missing)}`)
         return
       }
-      const uniq = validateUniqueness(def, table.rows)
-      if (uniq.length > 0) {
-        if (silent) return
-        const u = uniq[0]
-        pushNotice('error', `无法保存「${name}」：字段 ${u.field} 的值 ${JSON.stringify(u.value)} 在第 ${u.rows.join('、')} 行重复`)
-        return
-      }
+      if (silent) return
+      pushNotice('error', `无法保存「${name}」：${formatDuplicateIssue(v.duplicates[0])}`)
+      return
     }
 
     try {
@@ -287,11 +289,19 @@ export function App() {
         if (rows !== null) {
           await fsaWriteFile(dirHandle, `${def.name}.json`, tableToJSONL(compactRows(rows)))
         }
-        updateProject(p => ({
-          ...p,
-          types: new Map(p.types).set(def.name, nextDef),
-          tables: rows !== null ? p.tables.map(t => (t.name === def.name ? { ...t, rows } : t)) : p.tables,
-        }))
+        const nextTypes = new Map(result.project.types).set(def.name, nextDef)
+        const nextTables = rows !== null
+          ? result.project.tables.map(t => (t.name === def.name ? { ...t, rows } : t))
+          : result.project.tables
+        updateProject(p => ({ ...p, types: nextTypes, tables: nextTables }))
+        // 字段保存后全量校验（纯内存）：约束收紧可能使存量数据非法，逐表提醒
+        for (const v of projectViolations({ types: nextTypes, tables: nextTables })) {
+          const parts = [
+            ...(v.missing.length > 0 ? [formatMissingSummary(v.missing)] : []),
+            ...v.duplicates.map(formatDuplicateIssue),
+          ]
+          pushNotice('error', `「${v.table}」${parts.join('；')}`)
+        }
         setFieldEdit(null)
       } catch (e) {
         pushNotice('error', `字段保存失败：${String(e)}`)
