@@ -43,11 +43,7 @@
                     "raw": "number"
                 }
             },
-            "index": true,
-            "unique": true,
-            "nullable": true,
-            "displayName": "LvlReq",
-            "group": true
+            "displayName": "LvlReq"
         }
     ]
 }

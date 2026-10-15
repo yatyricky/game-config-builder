@@ -15,11 +15,7 @@
             "name": "Name",
             "type": {
                 "raw": "string"
-            },
-            "index": true,
-            "unique": true,
-            "nullable": true,
-            "group": true
+            }
         },
         {
             "name": "FuncName",
@@ -32,7 +28,7 @@
             "type": {
                 "raw": "number"
             },
-            "default": 0
+            "nullable": true
         }
     ]
 }
