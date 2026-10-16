@@ -242,7 +242,7 @@ export function Grid({ table, def, onEditCell, onApplyWrites, onPasteError }: Gr
   const startColDrag = (col: number) => (e: ReactMouseEvent<HTMLDivElement>): void => {
     e.preventDefault()
     if (!beginDrag()) return
-    setSelection({ rowStart: 0, rowEnd: rowCount - 1, colStart: col, colEnd: col, focus: { row: rowCount - 1, col } })
+    setSelection({ rowStart: 0, rowEnd: rowCount - 1, colStart: col, colEnd: col, focus: { row: 0, col } })
     setDrag({ mode: 'col', start: { row: 0, col } })
     focusViewport()
   }
@@ -253,7 +253,7 @@ export function Grid({ table, def, onEditCell, onApplyWrites, onPasteError }: Gr
   const startRowDrag = (row: number) => (e: ReactMouseEvent<HTMLDivElement>): void => {
     e.preventDefault()
     if (!beginDrag()) return
-    setSelection({ rowStart: row, rowEnd: row, colStart: 0, colEnd: colCount - 1, focus: { row, col: colCount - 1 } })
+    setSelection({ rowStart: row, rowEnd: row, colStart: 0, colEnd: colCount - 1, focus: { row, col: 0 } })
     setDrag({ mode: 'row', start: { row, col: 0 } })
     focusViewport()
   }

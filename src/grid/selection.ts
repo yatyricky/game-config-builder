@@ -23,14 +23,15 @@ export function singleAt(f: Focus): Selection {
   return { rowStart: f.row, rowEnd: f.row, colStart: f.col, colEnd: f.col, focus: f }
 }
 
-/** 拖拽选区：矩形(锚点=mousedown 格, 当前格)，随光标实时重算——路径不留痕（用户 2026-10-08 裁定），焦点随当前格 */
+/** 拖拽选区：矩形(锚点=mousedown 格, 当前格)，随光标实时重算——路径不留痕（用户 2026-10-08 裁定）。
+ * 焦点恒为锚点（用户 2026-10-16 裁定：拖拽过程中焦点保持在 mousedown 起始格，与 Excel 视觉逻辑一致——状态一次落定，不随光标翻转） */
 export function rectBetween(anchor: Focus, f: Focus): Selection {
   return {
     rowStart: Math.min(anchor.row, f.row),
     rowEnd: Math.max(anchor.row, f.row),
     colStart: Math.min(anchor.col, f.col),
     colEnd: Math.max(anchor.col, f.col),
-    focus: f,
+    focus: anchor,
   }
 }
 

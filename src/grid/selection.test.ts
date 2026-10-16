@@ -28,20 +28,20 @@ test('isMatrix / isInSelection', () => {
   assert.equal(isInSelection(mat(2, 3), 1, 1), false)
 })
 
-test('rectBetween：矩形(锚点,当前格)，路径不留痕', () => {
+test('rectBetween：矩形(锚点,当前格)，路径不留痕，焦点恒为锚点（2026-10-16 裁决）', () => {
   assert.deepEqual(rectBetween({ row: 2, col: 2 }, { row: 4, col: 4 }), {
-    rowStart: 2, rowEnd: 4, colStart: 2, colEnd: 4, focus: { row: 4, col: 4 },
+    rowStart: 2, rowEnd: 4, colStart: 2, colEnd: 4, focus: { row: 2, col: 2 },
   })
-  // 反方向（右下→左上）：bounds 一致
+  // 反方向（右下→左上）：bounds 一致，焦点保持在锚点
   assert.deepEqual(rectBetween({ row: 4, col: 4 }, { row: 1, col: 2 }), {
-    rowStart: 1, rowEnd: 4, colStart: 2, colEnd: 4, focus: { row: 1, col: 2 },
+    rowStart: 1, rowEnd: 4, colStart: 2, colEnd: 4, focus: { row: 4, col: 4 },
   })
   // bug 回归：从 (1,1) 经过 (1,3) 回到 (2,2)，最终选区 = 矩形((1,1),(2,2))，不含第 3 列
   assert.deepEqual(rectBetween({ row: 1, col: 1 }, { row: 1, col: 3 }), {
-    rowStart: 1, rowEnd: 1, colStart: 1, colEnd: 3, focus: { row: 1, col: 3 },
+    rowStart: 1, rowEnd: 1, colStart: 1, colEnd: 3, focus: { row: 1, col: 1 },
   })
   assert.deepEqual(rectBetween({ row: 1, col: 1 }, { row: 2, col: 2 }), {
-    rowStart: 1, rowEnd: 2, colStart: 1, colEnd: 2, focus: { row: 2, col: 2 },
+    rowStart: 1, rowEnd: 2, colStart: 1, colEnd: 2, focus: { row: 1, col: 1 },
   })
 })
 
