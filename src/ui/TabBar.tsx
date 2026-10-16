@@ -27,7 +27,7 @@ export function TabBar({ tables, selected, onSelect, onNew }: TabBarProps) {
     else btnRefs.current.delete(key)
   }
 
-  // Ctrl 按下：测量各页签视口坐标，徽记居中于页签上方 26px
+  // Ctrl 按下：测量各页签视口坐标，徽记与页签垂直居中平齐、悬浮其右侧（配合 overlay 的 translate(-50%,-50%) 中心定位）
   useLayoutEffect(() => {
     if (!ctrlHeld) {
       setBadges([])
@@ -38,7 +38,7 @@ export function TabBar({ tables, selected, onSelect, onNew }: TabBarProps) {
       const el = btnRefs.current.get(key)
       if (!el) return
       const r = el.getBoundingClientRect()
-      spots.push({ key, label, x: r.left + r.width / 2, y: r.top - 26 })
+      spots.push({ key, label, x: r.right + 16, y: r.top + r.height / 2 })
     }
     tables.forEach((name, i) => measure(name, String(i + 1)))
     measure('+new', 'M')

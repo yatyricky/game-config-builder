@@ -49,5 +49,8 @@ export async function loadProject(source: DirSource): Promise<LoadResult> {
     tables.push({ name, rows })
   }
 
+  // 表序按名称稳定排序：FSA 目录枚举序不保证稳定，页签序与 Ctrl+1..9 对应关系不随之漂移
+  tables.sort((a, b) => a.name.localeCompare(b.name))
+
   return { project: { types, tables }, issues }
 }

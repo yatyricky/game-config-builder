@@ -270,9 +270,9 @@ body,
   padding-right: var(--space-4);
 }
 
-/* 顶栏按钮的徽标放按钮下方（顶栏贴屏幕上沿，上方会出屏）；底栏 +新建用默认上方 */
+/* 顶栏按钮的徽标叠在按钮下缘（顶栏贴屏幕上沿，完全放上方会出屏；上移贴钮不浮在内容区上） */
 .kb-badge.below {
-  top: calc(100% + 6px);
+  top: calc(100% - 12px);
 }
 
 /* 快捷键徽标覆盖层：fixed 脱离文档流，与现有布局零关联 */
@@ -285,7 +285,7 @@ body,
 
 .kb-overlay .kb-badge {
   position: fixed;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
 }
 
 /* 设置 modal：ER 卡片节点图（连线仅 struct→struct、enum 不连线；拖拽/持久化/缩放） */

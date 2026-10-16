@@ -22,6 +22,8 @@ test('sample 工程全量解析（对照 spec 样例 + Priority 扩展）', asyn
   const { project, issues } = await loadProject(nodeSource('sample'))
   assert.deepEqual(issues, [])
   assert.equal(project.types.size, 3)
+  // 表序按名称稳定排序：FSA 目录枚举序不稳定，页签序与 Ctrl+1..9 对应关系不随之漂移
+  assert.deepEqual(project.tables.map(t => t.name), ['Effect', 'Skill'])
 
   const effect = project.types.get('Effect')
   assert.equal(effect?.kind, 'struct')
