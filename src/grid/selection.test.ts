@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { DEFAULT_SELECTION, focusToMatrixOrigin, isMatrix, isInSelection, navigate, navKeyOf, rectBetween, singleAt } from './selection.ts'
+import { DEFAULT_SELECTION, isMatrix, isInSelection, navigate, navKeyOf, rectBetween, singleAt } from './selection.ts'
 import type { Focus, Selection } from './selection.ts'
 
 const RC = 12
@@ -204,16 +204,6 @@ test('多选：入参不被修改', () => {
   navigate(s, 'ArrowDown', RC, CC)
   rectBetween({ row: 0, col: 0 }, { row: 0, col: 0 })
   assert.equal(JSON.stringify(s), before)
-})
-
-test('focusToMatrixOrigin：焦点归位首行首列，范围不变', () => {
-  const m = mat(3, 4)
-  const r = focusToMatrixOrigin(m)
-  assert.deepEqual(r.focus, { row: 1, col: 2 })
-  assert.deepEqual({ rowStart: r.rowStart, rowEnd: r.rowEnd, colStart: r.colStart, colEnd: r.colEnd }, {
-    rowStart: 1, rowEnd: 3, colStart: 2, colEnd: 4,
-  })
-  assert.deepEqual(focusToMatrixOrigin(single(2, 3)).focus, { row: 2, col: 3 })
 })
 
 test('navKeyOf 映射与 shift 变体', () => {

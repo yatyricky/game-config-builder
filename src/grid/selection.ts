@@ -150,11 +150,6 @@ function cycleFocus(s: Selection, key: 'Enter' | 'ShiftEnter' | 'Tab' | 'ShiftTa
   return { row, col }
 }
 
-/** 矩阵形成后焦点归位首行首列（spec：焦点默认为矩阵第一行第一列的单元格）；范围不变 */
-export function focusToMatrixOrigin(s: Selection): Selection {
-  return { ...s, focus: { row: s.rowStart, col: s.colStart } }
-}
-
 /** 键盘事件 → NavKey；非导航键返回 null。方向键区分 shift：普通=移动，shift=调整矩阵 */
 export function navKeyOf(key: string, shiftKey: boolean): NavKey | null {
   switch (key) {

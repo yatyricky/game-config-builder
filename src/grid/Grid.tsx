@@ -5,7 +5,7 @@ import { isStringType } from '../data/types.ts'
 import type { StructDef, Table } from '../data/types.ts'
 import { COL_WIDTH, ROW_HEADER_WIDTH, ROW_HEIGHT, canvasHeight, layoutColumns, totalWidth, visibleRows } from './layout.ts'
 import { formatCell } from './format.ts'
-import { DEFAULT_SELECTION, focusToMatrixOrigin, isInSelection, navKeyOf, navigate, rectBetween, singleAt } from './selection.ts'
+import { DEFAULT_SELECTION, isInSelection, navKeyOf, navigate, rectBetween, singleAt } from './selection.ts'
 import type { Focus, Selection } from './selection.ts'
 import { buildClipboard, planPaste } from '../data/clipboard.ts'
 import type { ClipboardContent, PasteWrite, SelectionBounds } from '../data/clipboard.ts'
@@ -63,12 +63,11 @@ export function Grid({ table, def, onEditCell, onApplyWrites, onPasteError }: Gr
     return () => window.removeEventListener('resize', measure)
   }, [])
 
-  // 拖拽收尾：网格外释放 mouseup 也要结束，并把矩阵焦点归位首行首列
+  // 拖拽收尾：网格外释放 mouseup 也要结束；焦点保持在锚点不重设（用户 2026-10-16 裁决）
   useEffect(() => {
     if (!drag) return
     const up = () => {
       setDrag(null)
-      setSelection(focusToMatrixOrigin)
     }
     window.addEventListener('mouseup', up)
     return () => window.removeEventListener('mouseup', up)
