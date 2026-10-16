@@ -15,7 +15,7 @@ interface BadgeSpot {
   y: number
 }
 
-/** spec 底栏（2026-10-09 修订）：各表页签 + [+ 新建] 共享横向 scroll view（不冻结）。
+/** spec 左侧表栏（2026-10-16 裁决，原底栏 2026-10-09）：各表页签 + [+ 新建] 共享纵向 scroll view（不冻结）。
  * 按住 Ctrl：快捷键徽记渲染在 fixed 覆盖层（测页签视口坐标定位）——与文档布局零关联；页签数字 = Ctrl+1.. 对应各表。 */
 export function TabBar({ tables, selected, onSelect, onNew }: TabBarProps) {
   const ctrlHeld = useCtrlHeld()
@@ -46,7 +46,7 @@ export function TabBar({ tables, selected, onSelect, onNew }: TabBarProps) {
   }, [ctrlHeld, tables])
 
   const tab = (key: string, label: string): React.ReactNode => (
-    <button key={key} ref={setRef(key)} className={`tab${selected === key ? ' active' : ''}`} onClick={() => onSelect(key)}>
+    <button key={key} ref={setRef(key)} className={`tab${selected === key ? ' active' : ''}`} onClick={() => onSelect(key)} title={label}>
       {label}
     </button>
   )

@@ -505,34 +505,36 @@ export function App() {
         onExport={() => pushNotice('info', '导出：NotImplemented（spec 待定义）')}
         onSchemas={() => setSettingsOpen(true)}
       />
-      <div className="content">
-        {projectOpen ? (
-          table && structDef ? (
-            <div className="grid-area">
-              <Grid
-                key={table.name}
-                table={table}
-                def={structDef}
-                onEditCell={(row, fieldName, value) => handleEditCell(table.name, row, fieldName, value)}
-                onApplyWrites={writes => handleApplyWrites(table.name, writes)}
-                onPasteError={msg => pushNotice('error', msg)}
-              />
-            </div>
-          ) : (
-            <p className="placeholder">{selectedTab ? `表格 ${selectedTab} 缺少对应的 struct 类型` : '工程中没有表格'}</p>
-          )
-        ) : (
-          <p className="placeholder">点击「打开」选择一个配置工程目录</p>
+      <div className="main-row">
+        {projectOpen && (
+          <TabBar
+            tables={result.project.tables.map(t => t.name)}
+            selected={selectedTab}
+            onSelect={setSelectedTab}
+            onNew={() => pushNotice('info', '新建表格：NotImplemented（依赖 schema 编辑，spec 待定）')}
+          />
         )}
+        <div className="content">
+          {projectOpen ? (
+            table && structDef ? (
+              <div className="grid-area">
+                <Grid
+                  key={table.name}
+                  table={table}
+                  def={structDef}
+                  onEditCell={(row, fieldName, value) => handleEditCell(table.name, row, fieldName, value)}
+                  onApplyWrites={writes => handleApplyWrites(table.name, writes)}
+                  onPasteError={msg => pushNotice('error', msg)}
+                />
+              </div>
+            ) : (
+              <p className="placeholder">{selectedTab ? `表格 ${selectedTab} 缺少对应的 struct 类型` : '工程中没有表格'}</p>
+            )
+          ) : (
+            <p className="placeholder">点击「打开」选择一个配置工程目录</p>
+          )}
+        </div>
       </div>
-      {projectOpen && (
-        <TabBar
-          tables={result.project.tables.map(t => t.name)}
-          selected={selectedTab}
-          onSelect={setSelectedTab}
-          onNew={() => pushNotice('info', '新建表格：NotImplemented（依赖 schema 编辑，spec 待定）')}
-        />
-      )}
       {settingsOpen && result && (
         <SettingsModal
           project={result.project}

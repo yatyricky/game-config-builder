@@ -95,9 +95,17 @@ body,
   z-index: 20;
 }
 
+/* 主行：左侧表栏 + 内容区 */
+.main-row {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
 /* 内容区 */
 .content {
   flex: 1;
+  min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -123,24 +131,27 @@ body,
   border-radius: var(--radius);
 }
 
-/* 底栏页签 */
+/* 左侧表栏（2026-10-16 裁决：底栏页签移至左侧竖排，数据库软件习惯） */
 .tabbar {
+  flex: none;
+  width: 160px;
   display: flex;
-  align-items: flex-end;
-  border-top: 1px solid var(--color-border);
+  flex-direction: column;
+  border-right: 1px solid var(--color-border);
   background: var(--color-subtle);
 }
 
 .tab-scroll {
   flex: 1;
-  min-width: 0;
+  min-height: 0;
   display: flex;
-  overflow-x: auto;
-  padding: var(--space-1) var(--space-2) 0;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: var(--space-2) 0;
 }
 
 .tab-scroll::-webkit-scrollbar {
-  height: 4px;
+  width: 4px;
 }
 
 .tab-scroll::-webkit-scrollbar-thumb {
@@ -152,16 +163,21 @@ body,
   background: transparent;
 }
 
+/* 全宽行式页签：左圆角右直角，active canvas 底色连接右侧内容区 */
 .tab {
   flex: none;
   border: 1px solid var(--color-border-muted);
-  border-bottom: none;
-  border-radius: var(--radius) var(--radius) 0 0;
+  border-right: none;
+  border-radius: var(--radius) 0 0 var(--radius);
   background: var(--color-subtle);
   color: var(--color-fg-muted);
   padding: var(--space-1) var(--space-3);
   font: inherit;
   font-size: var(--text-sm);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   cursor: pointer;
 }
 
@@ -176,23 +192,20 @@ body,
   border-color: var(--color-border);
 }
 
-/* 2026-10-09 修订：+ 新建随页签共享滚动，不再冻结最右 */
+/* + 新建随页签共享纵向滚动（2026-10-09 裁决语义不变，方向改纵） */
 .tab-new {
   flex: none;
   border: 1px solid var(--color-border-muted);
-  border-bottom: none;
-  border-radius: var(--radius) var(--radius) 0 0;
+  border-right: none;
+  border-radius: var(--radius) 0 0 var(--radius);
   background: var(--color-subtle);
   color: var(--color-fg-muted);
   padding: var(--space-1) var(--space-3);
   font: inherit;
   font-size: var(--text-md);
   line-height: 1.2;
+  text-align: left;
   cursor: pointer;
-}
-
-.tab-new:hover {
-  color: var(--color-accent);
 }
 
 .tab-new:hover {
