@@ -38,7 +38,7 @@ export function TabBar({ tables, selected, onSelect, onNew }: TabBarProps) {
       const el = btnRefs.current.get(key)
       if (!el) return
       const r = el.getBoundingClientRect()
-      spots.push({ key, label, x: r.right - 32, y: r.top })
+      spots.push({ key, label, x: r.right - 32, y: r.top + r.height / 2 })
     }
     tables.forEach((name, i) => measure(name, String(i + 1)))
     measure('+new', 'M')
