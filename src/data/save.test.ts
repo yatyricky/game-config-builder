@@ -8,8 +8,8 @@ import {
   projectViolations,
   tableToJSONL,
   tableViolations,
+  uniquenessViolations,
   validateRows,
-  validateUniqueness,
 } from './save.ts'
 import type { EnumDef, Project, StructDef, TableRow, TypeDef } from './types.ts'
 
@@ -80,62 +80,75 @@ test('裁决：字符串 trim 后全空的记录保存时删除', () => {
   assert.equal(next[0].ID, '001')
 })
 
-test('validateUniqueness：pk/unique 非空值重复报出，空值不查（裁决 2026-10-10）', () => {
+test('uniquenessViolations：同 schema 各表拼接查重，溯源到表+行（用户裁决 2026-10-16）', () => {
   const uniqDef: StructDef = {
     kind: 'struct',
     name: 'U',
-    tables: ['U'],
+    tables: ['A', 'B'],
     fields: [
       { name: 'ID', type: { raw: 'string' }, pk: true },
       { name: 'Code', type: { raw: 'string' }, unique: true },
       { name: 'N', type: { raw: 'number' } },
     ],
   }
-  const rows: TableRow[] = [
-    { ID: '1', Code: 'a', N: 0 },
-    { ID: '1', Code: 'b' },
-    { ID: '', Code: 'b' },
-    {},
-  ]
-  const issues = validateUniqueness(uniqDef, rows)
+  const issues = uniquenessViolations(uniqDef, [
+    { name: 'A', rows: [{ ID: '1', Code: 'a' }, { ID: '2', Code: 'b' }, { ID: '2', Code: 'c' }] },
+    { name: 'B', rows: [{ ID: '2', Code: 'b' }, { ID: '3', Code: 'x' }, {}] },
+  ])
   assert.equal(issues.length, 2)
   const id = issues.find(i => i.field === 'ID')
-  assert.deepEqual(id?.rows, [1, 2])
+  assert.deepEqual(id?.at, [
+    { table: 'A', row: 2 },
+    { table: 'A', row: 3 },
+    { table: 'B', row: 1 },
+  ])
   const code = issues.find(i => i.field === 'Code')
-  assert.deepEqual(code?.rows, [2, 3])
+  assert.deepEqual(code?.at, [
+    { table: 'A', row: 2 },
+    { table: 'B', row: 1 },
+  ])
 })
 
-test('validateUniqueness：全唯一返回空', () => {
-  const rows: TableRow[] = [{ ID: '1' }, { ID: '2' }]
-  assert.deepEqual(validateUniqueness(def, rows), [])
+test('uniquenessViolations：空记录与空白值跳过，全唯一返回空', () => {
+  assert.deepEqual(
+    uniquenessViolations(def, [
+      { name: 'A', rows: [{ ID: '  ' }, {}] },
+      { name: 'B', rows: [{ ID: '1' }, { ID: '2' }] },
+    ]),
+    [],
+  )
 })
 
-test('tableViolations：合规返回 null，违规聚合必填与查重', () => {
+test('tableViolations：合规返回 null，缺必填逐行报出', () => {
   assert.equal(tableViolations('Skill', def, [{ ID: '1', Name: 'x' }]), null)
   const v = tableViolations('Skill', def, [{ Name: 'x' }, { ID: '1' }, { ID: '1' }])
   assert.equal(v?.table, 'Skill')
   assert.equal(v?.missing.length, 3)
-  assert.deepEqual(v?.duplicates[0], { field: 'ID', value: '1', rows: [2, 3] })
 })
 
-test('projectViolations：跨表聚合，跳过 enum 与缺类型的表', () => {
+test('projectViolations：必填逐表，查重按 schema 分组合并（绑定经 tables 清单）', () => {
   const enumDef: EnumDef = { kind: 'enum', name: 'Kind', flags: false, members: [{ name: 'A', value: 1 }] }
+  const effect: StructDef = { kind: 'struct', name: 'Effect', tables: ['A', 'B'], fields: def.fields }
   const project: Project = {
     types: new Map<string, TypeDef>([
-      ['Skill', def],
+      ['Effect', effect],
       ['Kind', enumDef],
     ]),
     tables: [
-      { name: 'Skill', rows: [{ Name: 'x' }] },
+      { name: 'A', rows: [{ Name: 'x' }] },
+      { name: 'B', rows: [{ ID: '1', Name: 'a' }, { ID: '1', Name: 'b' }] },
       { name: 'Kind', rows: [{ x: 1 }] },
       { name: 'Ghost', rows: [{ y: 1 }] },
     ],
   }
-  const vs = projectViolations(project)
-  assert.equal(vs.length, 1)
-  assert.equal(vs[0].table, 'Skill')
-  assert.deepEqual(vs[0].missing, [{ row: 1, missing: ['ID'] }])
-  assert.deepEqual(vs[0].duplicates, [])
+  const pv = projectViolations(project)
+  assert.deepEqual(pv.missing, [{ table: 'A', missing: [{ row: 1, missing: ['ID'] }] }])
+  assert.equal(pv.duplicates.length, 1)
+  assert.equal(pv.duplicates[0].field, 'ID')
+  assert.deepEqual(pv.duplicates[0].at, [
+    { table: 'B', row: 1 },
+    { table: 'B', row: 2 },
+  ])
 })
 
 test('formatMissingSummary：首条 + 「 等 N 行」后缀', () => {
@@ -149,6 +162,9 @@ test('formatMissingSummary：首条 + 「 等 N 行」后缀', () => {
   )
 })
 
-test('formatDuplicateIssue：文案', () => {
-  assert.equal(formatDuplicateIssue({ field: 'ID', value: '1', rows: [2, 3] }), '字段 ID 的值 "1" 在第 2、3 行重复')
+test('formatDuplicateIssue：跨表溯源文案', () => {
+  assert.equal(
+    formatDuplicateIssue({ field: 'ID', value: '1', at: [{ table: 'Effect', row: 2 }, { table: 'SpellCast', row: 1 }] }),
+    '字段 ID 的值 "1" 在「Effect」第 2 行、「SpellCast」第 1 行重复',
+  )
 })

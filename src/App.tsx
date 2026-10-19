@@ -10,6 +10,7 @@ import {
   projectViolations,
   tableToJSONL,
   tableViolations,
+  uniquenessViolations,
 } from './data/save.ts'
 import {
   addField,
@@ -93,21 +94,29 @@ export function App() {
     if (!dh || !r) return
     const names = Object.keys(d)
     if (names.length === 0) return
+    const idx = tableTypeIndex(r.project.types)
 
+    // 必填：逐 dirty 表
     for (const name of names) {
-      const typeName = tableTypeIndex(r.project.types).get(name)
+      const typeName = idx.get(name)
       const def = typeName !== undefined ? r.project.types.get(typeName) : undefined
       const table = r.project.tables.find(t => t.name === name)
       if (!def || def.kind !== 'struct' || !table) continue
       const v = tableViolations(name, def, table.rows)
       if (!v) continue
-      if (v.missing.length > 0) {
-        if (silent) return
-        pushNotice('error', `无法保存「${name}」${formatMissingSummary(v.missing)}`)
-        return
-      }
       if (silent) return
-      pushNotice('error', `无法保存「${name}」：${formatDuplicateIssue(v.duplicates[0])}`)
+      pushNotice('error', `无法保存「${name}」${formatMissingSummary(v.missing)}`)
+      return
+    }
+    // pk/unique：按 schema 分组，同类型全部表（含未脏兄弟表）合并查重（用户裁决 2026-10-16）
+    const dirtyTypes = new Set(names.map(n => idx.get(n)).filter((t): t is string => t !== undefined))
+    for (const typeName of dirtyTypes) {
+      const def = r.project.types.get(typeName)
+      if (!def || def.kind !== 'struct') continue
+      const dup = uniquenessViolations(def, r.project.tables.filter(t => idx.get(t.name) === typeName))[0]
+      if (!dup) continue
+      if (silent) return
+      pushNotice('error', `无法保存：${formatDuplicateIssue(dup)}`)
       return
     }
 
@@ -313,13 +322,13 @@ export function App() {
               })
             : result.project.tables
         updateProject(p => ({ ...p, types: nextTypes, tables: nextTables }))
-        // 字段保存后全量校验（纯内存）：约束收紧可能使存量数据非法，逐表提醒
-        for (const v of projectViolations({ types: nextTypes, tables: nextTables })) {
-          const parts = [
-            ...(v.missing.length > 0 ? [formatMissingSummary(v.missing)] : []),
-            ...v.duplicates.map(formatDuplicateIssue),
-          ]
-          pushNotice('error', `「${v.table}」${parts.join('；')}`)
+        // 字段保存后全量校验（纯内存）：必填逐表提醒；pk/unique 按 schema 合并查重并溯源（用户裁决 2026-10-16）
+        const pv = projectViolations({ types: nextTypes, tables: nextTables })
+        for (const v of pv.missing) {
+          pushNotice('error', `「${v.table}」${formatMissingSummary(v.missing)}`)
+        }
+        for (const u of pv.duplicates) {
+          pushNotice('error', formatDuplicateIssue(u))
         }
         setFieldEdit(null)
       } catch (e) {
