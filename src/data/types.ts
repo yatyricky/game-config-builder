@@ -63,6 +63,8 @@ export interface FieldDef {
 export interface StructDef {
   kind: 'struct'
   name: string
+  /** 该类型全部表格文件名（表↔类型绑定的唯一信任源，一等公民；缺失文件按 issue 报告） */
+  tables: string[]
   fields: FieldDef[]
 }
 
@@ -76,6 +78,23 @@ export interface Table {
   /** SheetName，即文件名去掉 .json */
   name: string
   rows: TableRow[]
+}
+
+/** 表→类型绑定：schema 的 tables 清单是唯一信任源；不在任何清单的表无类型 */
+export function tableTypeIndex(types: Map<string, TypeDef>): Map<string, string> {
+  const idx = new Map<string, string>()
+  for (const def of types.values()) {
+    if (def.kind !== 'struct') continue
+    for (const t of def.tables) idx.set(t, def.name)
+  }
+  return idx
+}
+
+/** 表序：schema 分组（组间按 schema 名字母序）→ 文件名字母序；无类型的表按自身名归组 */
+export function sortTables(tables: readonly Table[], idx: Map<string, string>): Table[] {
+  return [...tables].sort(
+    (a, b) => (idx.get(a.name) ?? a.name).localeCompare(idx.get(b.name) ?? b.name) || a.name.localeCompare(b.name),
+  )
 }
 
 export interface Project {

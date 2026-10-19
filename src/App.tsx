@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { loadProject } from './data/loader.ts'
 import type { LoadResult } from './data/loader.ts'
 import { fsaDeleteFile, fsaSource, fsaWriteFile } from './data/dirSource.ts'
@@ -33,13 +33,15 @@ import { TopBar } from './ui/TopBar.tsx'
 import { TabBar } from './ui/TabBar.tsx'
 import { SettingsModal } from './ui/SettingsModal.tsx'
 import { FieldEditModal } from './ui/FieldEditModal.tsx'
+import { TableModal } from './ui/TableModal.tsx'
 import { EnumMemberModal } from './ui/EnumMemberModal.tsx'
 import { EnumCardModal } from './ui/EnumCardModal.tsx'
 import { NewTypeModal } from './ui/NewTypeModal.tsx'
 import { ConfirmDialog } from './ui/ConfirmDialog.tsx'
 import { Notices } from './ui/Notices.tsx'
 import type { NoticeItem } from './ui/Notices.tsx'
-import type { Project, TableRow, TypeDef } from './data/types.ts'
+import type { Project, StructDef, TableRow, TypeDef } from './data/types.ts'
+import { sortTables, tableTypeIndex } from './data/types.ts'
 import './theme.css'
 import './app.css'
 
@@ -69,6 +71,7 @@ export function App() {
   const [memberEdit, setMemberEdit] = useState<{ enumName: string; member: string | null } | null>(null)
   const [enumCardEdit, setEnumCardEdit] = useState<string | null>(null)
   const [newTypeOpen, setNewTypeOpen] = useState(false)
+  const [tableModal, setTableModal] = useState<{ mode: 'create' } | { mode: 'edit'; name: string } | null>(null)
   const [confirmState, setConfirmState] = useState<{ message: string; action: () => void } | null>(null)
   const [dirty, setDirty] = useState<Record<string, true>>({})
   const [notices, setNotices] = useState<NoticeItem[]>([])
@@ -76,6 +79,9 @@ export function App() {
 
   const stateRef = useRef({ dirHandle, result, dirty })
   stateRef.current = { dirHandle, result, dirty }
+
+  /** 表→类型绑定：schema tables 清单的派生索引（唯一信任源在 schema 文件，这里按需重算） */
+  const tableIdx = useMemo(() => (result ? tableTypeIndex(result.project.types) : new Map<string, string>()), [result])
 
   const pushNotice = (kind: NoticeItem['kind'], text: string): void => {
     setNotices(xs => [{ id: crypto.randomUUID(), kind, text }, ...xs])
@@ -89,7 +95,8 @@ export function App() {
     if (names.length === 0) return
 
     for (const name of names) {
-      const def = r.project.types.get(name)
+      const typeName = tableTypeIndex(r.project.types).get(name)
+      const def = typeName !== undefined ? r.project.types.get(typeName) : undefined
       const table = r.project.tables.find(t => t.name === name)
       if (!def || def.kind !== 'struct' || !table) continue
       const v = tableViolations(name, def, table.rows)
@@ -257,11 +264,12 @@ export function App() {
       else if (memberEdit) setMemberEdit(null)
       else if (enumCardEdit) setEnumCardEdit(null)
       else if (newTypeOpen) setNewTypeOpen(false)
+      else if (tableModal) setTableModal(null)
       else if (settingsOpen) setSettingsOpen(false)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [confirmState, fieldEdit, memberEdit, enumCardEdit, newTypeOpen, settingsOpen])
+  }, [confirmState, fieldEdit, memberEdit, enumCardEdit, newTypeOpen, tableModal, settingsOpen])
 
   const updateProject = (fn: (p: Project) => Project): void => {
     setResult(prev => (prev ? { ...prev, project: fn(prev.project) } : prev))
@@ -273,26 +281,37 @@ export function App() {
     if (!def || def.kind !== 'struct') return
     const write = async (): Promise<void> => {
       try {
-        const table = result.project.tables.find(t => t.name === def.name)
-        let rows: TableRow[] | null = null
+        const idx = tableTypeIndex(result.project.types)
+        const sameType = result.project.tables.filter(t => idx.get(t.name) === def.name)
+        let cascaded: { name: string; rows: TableRow[] }[] | null = null
         const renamed = originalName !== null && originalName !== patch.name
-        if (table && renamed) {
-          const cascaded = renameFieldCascade(table.rows, originalName, patch.name)
-          if (cascaded.conflict) {
-            pushNotice('error', `无法改名：表格数据中已存在键「${patch.name}」，会产生合并污染`)
-            return
+        if (renamed) {
+          cascaded = []
+          for (const t of sameType) {
+            const r = renameFieldCascade(t.rows, originalName, patch.name)
+            if (r.conflict) {
+              pushNotice('error', `无法改名：表格「${t.name}」数据中已存在键「${patch.name}」，会产生合并污染`)
+              return
+            }
+            cascaded.push({ name: t.name, rows: r.rows })
           }
-          rows = cascaded.rows
         }
         const nextDef = originalName === null ? addField(def, patch) : updateField(def, originalName, patch)
         await fsaWriteFile(dirHandle, `schema/${def.name}.json`, serializeStruct(nextDef))
-        if (rows !== null) {
-          await fsaWriteFile(dirHandle, `${def.name}.json`, tableToJSONL(compactRows(rows)))
+        if (cascaded !== null) {
+          for (const c of cascaded) {
+            await fsaWriteFile(dirHandle, `${c.name}.json`, tableToJSONL(compactRows(c.rows)))
+          }
         }
         const nextTypes = new Map(result.project.types).set(def.name, nextDef)
-        const nextTables = rows !== null
-          ? result.project.tables.map(t => (t.name === def.name ? { ...t, rows } : t))
-          : result.project.tables
+        const cas = cascaded
+        const nextTables =
+          cas !== null
+            ? result.project.tables.map(t => {
+                const c = cas.find(x => x.name === t.name)
+                return c ? { ...t, rows: c.rows } : t
+              })
+            : result.project.tables
         updateProject(p => ({ ...p, types: nextTypes, tables: nextTables }))
         // 字段保存后全量校验（纯内存）：约束收紧可能使存量数据非法，逐表提醒
         for (const v of projectViolations({ types: nextTypes, tables: nextTables })) {
@@ -417,21 +436,115 @@ export function App() {
     if (!dirHandle || !result) return
     void (async () => {
       try {
+        const idx = tableTypeIndex(result.project.types)
+        const owned = result.project.tables.filter(t => idx.get(t.name) === name)
         await fsaDeleteFile(dirHandle, `schema/${name}.json`)
-        const table = result.project.tables.find(t => t.name === name)
-        if (table && compactRows(table.rows).length === 0) {
-          await fsaDeleteFile(dirHandle, `${name}.json`)
-        }
+        // canDeleteType 已保证该类型全部表格无数据，数据文件一并清理
+        for (const t of owned) await fsaDeleteFile(dirHandle, `${t.name}.json`)
         updateProject(p => {
           const types = new Map(p.types)
           types.delete(name)
-          return { ...p, types, tables: p.tables.filter(t => t.name !== name) }
+          return { ...p, types, tables: p.tables.filter(t => idx.get(t.name) !== name) }
         })
-        if (selectedTab === name) setSelectedTab(result.project.tables.find(t => t.name !== name)?.name ?? '')
+        setDirty(prev => {
+          const next = { ...prev }
+          for (const t of owned) delete next[t.name]
+          return next
+        })
+        if (selectedTab === name || owned.some(t => t.name === selectedTab)) {
+          setSelectedTab(result.project.tables.find(t => idx.get(t.name) !== name)?.name ?? '')
+        }
       } catch (e) {
         pushNotice('error', `类型删除失败：${String(e)}`)
       }
     })()
+  }
+
+  const handleTableSubmit = (name: string, type: string): void => {
+    if (!dirHandle || !result || !tableModal) return
+    if (tableModal.mode === 'create') void createTable(name, type)
+    else void renameTable(tableModal.name, name, type)
+  }
+
+  /** 新建表格：空数据文件 + schema 清单追加；表名可后期改，无需二次确认 */
+  const createTable = async (name: string, type: string): Promise<void> => {
+    const def = result?.project.types.get(type)
+    if (!dirHandle || !result || !def || def.kind !== 'struct') return
+    const nextDef: StructDef = { ...def, tables: [...def.tables, name] }
+    try {
+      await fsaWriteFile(dirHandle, `${name}.json`, '')
+      await fsaWriteFile(dirHandle, `schema/${type}.json`, serializeStruct(nextDef))
+      updateProject(p => {
+        const types = new Map(p.types).set(type, nextDef)
+        return { types, tables: sortTables([...p.tables, { name, rows: [] }], tableTypeIndex(types)) }
+      })
+      setSelectedTab(name)
+      setTableModal(null)
+    } catch (e) {
+      pushNotice('error', `新建表格失败：${String(e)}`)
+    }
+  }
+
+  /** 表格改名：数据文件迁移 + schema 清单改名；dirty 键随迁防脏标记丢失 */
+  const renameTable = async (oldName: string, newName: string, type: string): Promise<void> => {
+    if (!dirHandle || !result) return
+    if (oldName === newName) {
+      setTableModal(null)
+      return
+    }
+    const def = result.project.types.get(type)
+    const table = result.project.tables.find(t => t.name === oldName)
+    if (!def || def.kind !== 'struct' || !table) return
+    const nextDef: StructDef = { ...def, tables: def.tables.map(t => (t === oldName ? newName : t)) }
+    try {
+      await fsaWriteFile(dirHandle, `${newName}.json`, tableToJSONL(table.rows))
+      await fsaDeleteFile(dirHandle, `${oldName}.json`)
+      await fsaWriteFile(dirHandle, `schema/${type}.json`, serializeStruct(nextDef))
+      updateProject(p => {
+        const types = new Map(p.types).set(type, nextDef)
+        return {
+          types,
+          tables: sortTables(p.tables.map(t => (t.name === oldName ? { ...t, name: newName } : t)), tableTypeIndex(types)),
+        }
+      })
+      setDirty(prev => {
+        if (!prev[oldName]) return prev
+        const next = { ...prev }
+        delete next[oldName]
+        next[newName] = true
+        return next
+      })
+      if (selectedTab === oldName) setSelectedTab(newName)
+      setTableModal(null)
+    } catch (e) {
+      pushNotice('error', `表格改名失败：${String(e)}`)
+    }
+  }
+
+  const handleTableDelete = async (name: string): Promise<void> => {
+    if (!dirHandle || !result) return
+    const type = tableIdx.get(name)
+    const def = type !== undefined ? result.project.types.get(type) : undefined
+    if (type === undefined || !def || def.kind !== 'struct') return
+    const nextDef: StructDef = { ...def, tables: def.tables.filter(t => t !== name) }
+    try {
+      await fsaDeleteFile(dirHandle, `${name}.json`)
+      await fsaWriteFile(dirHandle, `schema/${type}.json`, serializeStruct(nextDef))
+      updateProject(p => {
+        const types = new Map(p.types).set(type, nextDef)
+        return { types, tables: p.tables.filter(t => t.name !== name) }
+      })
+      setDirty(prev => {
+        if (!prev[name]) return prev
+        const next = { ...prev }
+        delete next[name]
+        return next
+      })
+      if (selectedTab === name) setSelectedTab(result.project.tables.find(t => t.name !== name)?.name ?? '')
+      setTableModal(null)
+    } catch (e) {
+      pushNotice('error', `表格删除失败：${String(e)}`)
+    }
   }
 
   // 全局快捷键（ref 取最新回调）
@@ -439,7 +552,13 @@ export function App() {
     save: saveNow,
     open: (): void => void open(),
     exportCsv: (): void => pushNotice('info', '导出：NotImplemented（spec 待定义）'),
-    newTable: (): void => pushNotice('info', '新建表格：NotImplemented（依赖 schema 编辑，spec 待定）'),
+    newTable: (): void => {
+      if (!stateRef.current.result) {
+        pushNotice('error', '请先打开工程')
+        return
+      }
+      setTableModal({ mode: 'create' })
+    },
     selectSheet: (n: number): void => {
       const r = stateRef.current.result
       const name = r?.project.tables[n - 1]?.name
@@ -450,7 +569,13 @@ export function App() {
     save: saveNow,
     open: (): void => void open(),
     exportCsv: (): void => pushNotice('info', '导出：NotImplemented（spec 待定义）'),
-    newTable: (): void => pushNotice('info', '新建表格：NotImplemented（依赖 schema 编辑，spec 待定）'),
+    newTable: (): void => {
+      if (!stateRef.current.result) {
+        pushNotice('error', '请先打开工程')
+        return
+      }
+      setTableModal({ mode: 'create' })
+    },
     selectSheet: (n: number): void => {
       const r = stateRef.current.result
       const name = r?.project.tables[n - 1]?.name
@@ -488,7 +613,8 @@ export function App() {
   }, [])
 
   const table = result?.project.tables.find(t => t.name === selectedTab)
-  const def = result?.project.types.get(selectedTab)
+  const selectedType = table !== undefined ? tableIdx.get(table.name) : undefined
+  const def = selectedType !== undefined ? result?.project.types.get(selectedType) : undefined
   const structDef = def?.kind === 'struct' ? def : null
   const projectOpen = dirHandle !== null && result !== null
   const isDirty = Object.keys(dirty).length > 0
@@ -506,14 +632,18 @@ export function App() {
         onSchemas={() => setSettingsOpen(true)}
       />
       <div className="main-row">
-        {projectOpen && (
-          <TabBar
-            tables={result.project.tables.map(t => t.name)}
-            selected={selectedTab}
-            onSelect={setSelectedTab}
-            onNew={() => pushNotice('info', '新建表格：NotImplemented（依赖 schema 编辑，spec 待定）')}
-          />
-        )}
+      {projectOpen && (
+        <TabBar
+          tabs={result.project.tables.map(t => {
+            const type = tableIdx.get(t.name)
+            return { name: t.name, label: type !== undefined && !t.name.includes(type) ? `${t.name}-${type}` : t.name }
+          })}
+          selected={selectedTab}
+          onSelect={setSelectedTab}
+          onEdit={name => setTableModal({ mode: 'edit', name })}
+          onNew={() => setTableModal({ mode: 'create' })}
+        />
+      )}
         <div className="content">
           {projectOpen ? (
             table && structDef ? (
@@ -549,6 +679,28 @@ export function App() {
           }}
         />
       )}
+      {result && tableModal && (() => {
+        const editName = tableModal.mode === 'edit' ? tableModal.name : null
+        return (
+          <TableModal
+            mode={tableModal.mode}
+            types={result.project.types}
+            tableNames={result.project.tables.map(t => t.name)}
+            initial={editName !== null ? { name: editName, type: tableIdx.get(editName) ?? '' } : undefined}
+            onSubmit={handleTableSubmit}
+            onDelete={
+              editName !== null
+                ? () =>
+                    setConfirmState({
+                      message: `删除表格「${editName}」将同时删除数据文件，不可恢复。确认删除？`,
+                      action: () => void handleTableDelete(editName),
+                    })
+                : undefined
+            }
+            onClose={() => setTableModal(null)}
+          />
+        )
+      })()}
       {settingsOpen && result && fieldEdit && (() => {
         const def = result.project.types.get(fieldEdit.type)
         if (!def || def.kind !== 'struct') return null

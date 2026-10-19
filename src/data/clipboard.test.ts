@@ -8,6 +8,7 @@ import type { StructDef, TableRow } from './types.ts'
 const strDef: StructDef = {
   kind: 'struct',
   name: 'S6',
+  tables: ['S6'],
   fields: [
     { name: 'A', type: { raw: 'string' } },
     { name: 'B', type: { raw: 'string' } },
@@ -22,6 +23,7 @@ const strDef: StructDef = {
 const mixedDef: StructDef = {
   kind: 'struct',
   name: 'T',
+  tables: ['T'],
   fields: [
     { name: 'S', type: { raw: 'string' } },
     { name: 'N', type: { raw: 'number' } },

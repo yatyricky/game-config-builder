@@ -16,6 +16,7 @@ import type { EnumDef, Project, StructDef, TableRow, TypeDef } from './types.ts'
 const def: StructDef = {
   kind: 'struct',
   name: 'Skill',
+  tables: ['Skill'],
   fields: [
     { name: 'ID', type: { raw: 'string' }, pk: true },
     { name: 'Name', type: { raw: 'string' } },
@@ -83,6 +84,7 @@ test('validateUniqueness：pk/unique 非空值重复报出，空值不查（裁�
   const uniqDef: StructDef = {
     kind: 'struct',
     name: 'U',
+    tables: ['U'],
     fields: [
       { name: 'ID', type: { raw: 'string' }, pk: true },
       { name: 'Code', type: { raw: 'string' }, unique: true },

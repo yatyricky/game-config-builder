@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FieldDef, Project, StructDef, TypeNode } from '../data/types.ts'
+import { tableTypeIndex } from '../data/types.ts'
 import {
   canDeleteField,
   canEditFieldType,
@@ -34,7 +35,8 @@ function selectableNames(project: Project, selfName: string): string[] {
 export function FieldEditModal({ def, field, project, onSave, onDelete, onClose }: FieldEditModalProps) {
   const nameRef = useRef<HTMLInputElement>(null)
   const originalName = field?.name ?? null
-  const rows = project.tables.find(t => t.name === def.name)?.rows ?? []
+  // 该类型全部表格（tables 清单绑定）的行拼接：字段使用/冲突判定覆盖同类全部表
+  const rows = project.tables.filter(t => tableTypeIndex(project.types).get(t.name) === def.name).flatMap(t => t.rows)
 
   const [name, setName] = useState(() => (field ? field.name : nextFieldName(def)))
   const [displayName, setDisplayName] = useState(() => field?.displayName ?? '')

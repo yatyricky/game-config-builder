@@ -1,4 +1,4 @@
-import { JS_PRIMITIVE_TYPES } from './types.ts'
+import { JS_PRIMITIVE_TYPES, tableTypeIndex } from './types.ts'
 import type { EnumDef, FieldDef, Project, StructDef, TableRow, TypeDef, TypeNode } from './types.ts'
 import { compactRows } from './save.ts'
 
@@ -11,6 +11,29 @@ export function validateTypeName(name: string, types: Map<string, TypeDef>): str
   if (JS_PRIMITIVE_TYPES.has(n)) return `名称 ${n} 与 js 基础类型冲突`
   if (types.has(n)) return `类型 ${n} 已存在`
   return null
+}
+
+/** 表格文件名校验：非空/无首尾空白/不与其他表格重名（改名排除自身）/不得与任何类型同名（自身类型除外，避免绑定歧义） */
+export function validateTableName(
+  name: string,
+  type: string,
+  tableNames: readonly string[],
+  types: Map<string, TypeDef>,
+): string | null {
+  const n = name.trim()
+  if (n === '') return '名称不能为空'
+  if (n !== name) return '名称首尾不能有空白'
+  if (tableNames.includes(n)) return `表格 ${n} 已存在`
+  if (n !== type && types.has(n)) return `名称 ${n} 与类型名冲突，会产生绑定歧义`
+  return null
+}
+
+/** 新建表格缺省名：typeName 可用即用之，否则自增自然数 Effect2/Effect3…（用户裁决 2026-10-16） */
+export function nextTableName(typeName: string, existing: readonly string[]): string {
+  if (!existing.includes(typeName)) return typeName
+  let i = 2
+  while (existing.includes(`${typeName}${i}`)) i++
+  return `${typeName}${i}`
 }
 
 export function validateFieldName(name: string, def: StructDef, originalName: string | null): string | null {
@@ -81,10 +104,10 @@ export function typeReferenced(types: Map<string, TypeDef>, name: string): boole
   return false
 }
 
-/** 类型有数据：存在同名表且压缩后非 0 行 */
+/** 类型有数据：该类型任一表格（经 tables 清单绑定）压缩后非 0 行 */
 export function typeHasData(project: Project, name: string): boolean {
-  const t = project.tables.find(x => x.name === name)
-  return !!t && compactRows(t.rows).length > 0
+  const idx = tableTypeIndex(project.types)
+  return project.tables.some(t => idx.get(t.name) === name && compactRows(t.rows).length > 0)
 }
 
 export function canDeleteType(project: Project, name: string): boolean {
@@ -116,8 +139,9 @@ export function pkLockState(def: StructDef, field: FieldDef, project: Project): 
   if (typeReferenced(project.types, name)) {
     return { locked: true, reason: '本类型已被其他类型引用，pk 不可变更' }
   }
-  if (project.tables.some(t => t.name === name)) {
-    return { locked: true, reason: '本类型存在同名表格数据，pk 不可变更' }
+  const idx = tableTypeIndex(project.types)
+  if (project.tables.some(t => idx.get(t.name) === name)) {
+    return { locked: true, reason: '本类型存在表格数据，pk 不可变更' }
   }
   return { locked: false, reason: null }
 }
@@ -145,13 +169,15 @@ export const ENUM_MAX_FLAGS_MEMBERS = 30
 
 /** 成员值被任何表数据使用（直连 raw<枚举> 字段；容器内嵌套引用不扫，注释留痕） */
 export function memberValueUsed(project: Project, enumName: string, value: number): boolean {
+  const idx = tableTypeIndex(project.types)
   for (const def of project.types.values()) {
     if (def.kind !== 'struct') continue
     for (const f of def.fields) {
       if (!('raw' in f.type) || f.type.raw !== enumName) continue
-      const table = project.tables.find(t => t.name === def.name)
-      if (!table) continue
-      if (table.rows.some(r => r[f.name] === value)) return true
+      for (const table of project.tables) {
+        if (idx.get(table.name) !== def.name) continue
+        if (table.rows.some(r => r[f.name] === value)) return true
+      }
     }
   }
   return false
@@ -264,7 +290,12 @@ export function removeMember(def: EnumDef, memberName: string): EnumDef {
 // ---- 类型级 ----
 
 export function createStructType(name: string): StructDef {
-  return { kind: 'struct', name, fields: [{ name: 'ID', type: { raw: 'string' }, pk: true, index: true, unique: true }] }
+  return {
+    kind: 'struct',
+    name,
+    tables: [],
+    fields: [{ name: 'ID', type: { raw: 'string' }, pk: true, index: true, unique: true }],
+  }
 }
 
 export function createEnumType(name: string, flags: boolean): EnumDef {
@@ -299,7 +330,7 @@ function fieldToJson(f: FieldDef): Record<string, unknown> {
 }
 
 export function serializeStruct(def: StructDef): string {
-  const json = { meta: { type: 'struct', name: def.name }, fields: def.fields.map(fieldToJson) }
+  const json = { meta: { type: 'struct', name: def.name }, tables: def.tables, fields: def.fields.map(fieldToJson) }
   return JSON.stringify(json, null, 4) + '\n'
 }
 

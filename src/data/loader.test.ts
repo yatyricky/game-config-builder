@@ -72,11 +72,30 @@ test('根目录未知类型的表格报错', async () => {
   })
 })
 
-test('枚举类型不能作为表格', async () => {
+test('未登记的表格文件报无对应类型（枚举不参与 tables 清单）', async () => {
   await withTmpCopy(async dir => {
     await writeFile(join(dir, 'School.json'), '{"x": 1}\n', 'utf8')
     const { issues } = await loadProject(nodeSource(dir))
-    assert.ok(issues.some(i => i.message.includes('枚举')))
+    assert.ok(issues.some(i => i.file === 'School.json' && i.message.includes('没有对应的 struct 类型')))
+  })
+})
+
+test('tables 清单绑定：登记文件按 schema 解析类型并参与排序（2026-10-16 裁决）', async () => {
+  await withTmpCopy(async dir => {
+    await writeFile(
+      join(dir, 'schema', 'Extra.json'),
+      JSON.stringify(
+        { meta: { type: 'struct', name: 'Extra' }, tables: ['Foo'], fields: [{ name: 'ID', type: { raw: 'string' }, pk: true }] },
+        null,
+        4,
+      ) + '\n',
+      'utf8',
+    )
+    await writeFile(join(dir, 'Foo.json'), '{"ID": "1"}\n', 'utf8')
+    const { project, issues } = await loadProject(nodeSource(dir))
+    assert.ok(!issues.some(i => i.file === 'Foo.json'))
+    // schema 分组排序：Effect(Effect) < Foo(Extra) < Skill(Skill)
+    assert.deepEqual(project.tables.map(t => t.name), ['Effect', 'Foo', 'Skill'])
   })
 })
 

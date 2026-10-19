@@ -71,6 +71,16 @@ export function parseSchemas(files: SchemaFileInput[]): SchemaParseResult {
     }
   }
 
+  // tables 清单跨类型冲突检测：同一表格文件只能归属一个 struct（唯一信任源要求归属唯一）
+  const claim = new Map<string, string>()
+  for (const { file, def } of structs) {
+    for (const t of def.tables) {
+      const prev = claim.get(t)
+      if (prev === undefined) claim.set(t, def.name)
+      else issues.push({ file, message: `表格 ${t} 同时被 ${prev} 与 ${def.name} 的 tables 清单登记` })
+    }
+  }
+
   return { types, issues }
 }
 
@@ -130,6 +140,13 @@ function toTypeDef(file: string, json: unknown, issues: ValidationIssue[]): Type
     return def
   }
 
+  // tables 清单为一等公民：表↔类型绑定的唯一信任源，缺失即 schema 非法
+  const tablesJson = json['tables']
+  if (!Array.isArray(tablesJson) || tablesJson.some(t => typeof t !== 'string' || t === '')) {
+    issues.push({ file, message: `struct ${name} 缺少 tables 非空字符串数组` })
+    return null
+  }
+
   const fieldsJson = json['fields']
   if (!Array.isArray(fieldsJson)) {
     issues.push({ file, message: `struct ${name} 缺少 fields 数组` })
@@ -153,7 +170,7 @@ function toTypeDef(file: string, json: unknown, issues: ValidationIssue[]): Type
     if (fj['group'] === true) f.group = true
     fields.push(f)
   }
-  const def: StructDef = { kind, name, fields }
+  const def: StructDef = { kind, name, tables: tablesJson as string[], fields }
   return def
 }
 

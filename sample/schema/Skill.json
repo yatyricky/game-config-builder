@@ -3,6 +3,9 @@
         "type": "struct",
         "name": "Skill"
     },
+    "tables": [
+        "Skill"
+    ],
     "fields": [
         {
             "name": "ID",

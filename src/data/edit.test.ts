@@ -6,6 +6,7 @@ import type { StructDef, TableRow } from './types.ts'
 const def: StructDef = {
   kind: 'struct',
   name: 'Skill',
+  tables: ['Skill'],
   fields: [
     { name: 'ID', type: { raw: 'string' }, pk: true },
     { name: 'Name', type: { raw: 'string' } },
@@ -70,6 +71,7 @@ test('nullable 字段不算必填（裁决 2026-10-10）', () => {
   const d: StructDef = {
     kind: 'struct',
     name: 'T',
+    tables: ['T'],
     fields: [
       { name: 'ID', type: { raw: 'string' }, pk: true },
       { name: 'Note', type: { raw: 'string' }, nullable: true },

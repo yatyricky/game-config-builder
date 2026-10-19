@@ -1,6 +1,7 @@
 import { parseSchemas } from './schemaParser.ts'
 import type { SchemaFileInput } from './schemaParser.ts'
 import { parseJsonl } from './jsonl.ts'
+import { sortTables, tableTypeIndex } from './types.ts'
 import type { DirSource } from './dirSource.ts'
 import type { Project, Table, ValidationIssue } from './types.ts'
 
@@ -9,7 +10,7 @@ export interface LoadResult {
   issues: ValidationIssue[]
 }
 
-/** 表名即类型名：工程根目录 X.json 是类型 X 的表格（spec 样例即此约定） */
+/** 表格文件 ↔ 类型的绑定以 schema 的 tables 清单为唯一信任源；根目录 *.json 为表格数据（spec 样例即此约定） */
 export async function loadProject(source: DirSource): Promise<LoadResult> {
   const issues: ValidationIssue[] = []
   const rootEntries = await source.listDir('.')
@@ -33,24 +34,19 @@ export async function loadProject(source: DirSource): Promise<LoadResult> {
   const { types, issues: schemaIssues } = parseSchemas(schemaInputs)
   issues.push(...schemaIssues)
 
-  // 根目录 *.json 为表格；schema/、export/ 是目录，天然不参与
+  const idx = tableTypeIndex(types)
   const tables: Table[] = []
   for (const e of rootEntries) {
     if (e.kind !== 'file' || !e.name.endsWith('.json')) continue
     const name = e.name.slice(0, -'.json'.length)
     const { rows, issues: jsonlIssues } = parseJsonl(await source.readFile(e.name), e.name)
     issues.push(...jsonlIssues)
-    const def = types.get(name)
-    if (!def) {
+    if (!idx.has(name)) {
       issues.push({ file: e.name, message: `表格 ${name} 没有对应的 struct 类型` })
-    } else if (def.kind !== 'struct') {
-      issues.push({ file: e.name, message: `表格类型 ${name} 是枚举，不能作为表格` })
     }
     tables.push({ name, rows })
   }
 
-  // 表序按名称稳定排序：FSA 目录枚举序不保证稳定，页签序与 Ctrl+1..9 对应关系不随之漂移
-  tables.sort((a, b) => a.name.localeCompare(b.name))
-
-  return { project: { types, tables }, issues }
+  // 表序：schema 分组 → 文件名字母序，页签与 Ctrl+1..9 对应关系稳定
+  return { project: { types, tables: sortTables(tables, idx) }, issues }
 }

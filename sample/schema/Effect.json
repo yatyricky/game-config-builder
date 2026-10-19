@@ -3,6 +3,9 @@
         "type": "struct",
         "name": "Effect"
     },
+    "tables": [
+        "Effect"
+    ],
     "fields": [
         {
             "name": "ID",

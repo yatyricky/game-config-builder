@@ -1,4 +1,5 @@
 import type { Project, StructDef, TableRow } from './types.ts'
+import { tableTypeIndex } from './types.ts'
 import { missingRequired } from './edit.ts'
 
 /** 空记录（裁决 2026-10-08）：所有值 undefined 或字符串 trim 后为空——保存时自动删除 */
@@ -70,11 +71,13 @@ export function tableViolations(name: string, def: StructDef, rows: readonly Tab
   return { table: name, missing, duplicates }
 }
 
-/** 全工程校验：逐表聚合；enum 或缺类型的表跳过 */
+/** 全工程校验：逐表必填缺失与 pk/unique 查重；表→类型经 tables 清单索引解析（同 schema 合并查重见后续裁决） */
 export function projectViolations(project: Project): TableViolation[] {
+  const idx = tableTypeIndex(project.types)
   const out: TableViolation[] = []
   for (const t of project.tables) {
-    const def = project.types.get(t.name)
+    const typeName = idx.get(t.name)
+    const def = typeName !== undefined ? project.types.get(typeName) : undefined
     if (!def || def.kind !== 'struct') continue
     const v = tableViolations(t.name, def, t.rows)
     if (v) out.push(v)
